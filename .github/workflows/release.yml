@@ -1,0 +1,126 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event.workflow_run.head_branch || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build & Publish Release
+    runs-on: macos-14
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' ||
+        github.event_name == 'push' ||
+        github.event.workflow_run.conclusion == 'success'
+      }}
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Resolve Version & Tag
+        id: meta
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_run" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            VERSION=$(cat package.json | grep '"version"' | head -1 | awk -F: '{ print $2 }' | sed 's/[", ]//g')
+            TAG="v$VERSION"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+            if git rev-parse "$TAG" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
+              echo "Tag $TAG already exists on remote."
+            else
+              echo "Creating tag $TAG..."
+              git config user.name "github-actions[bot]"
+              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+              git tag "$TAG"
+              git push origin "refs/tags/$TAG"
+            fi
+          else
+            TAG="${GITHUB_REF_NAME:-v1.0.0}"
+            echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+            echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Select Xcode Version
+        run: |
+          XCODE_APP=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$XCODE_APP" ]; then
+            XCODE_APP="/Applications/Xcode.app"
+          fi
+          echo "Selected: $XCODE_APP"
+          sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+
+      - name: Build and Bundle App
+        run: make bundle
+
+      - name: Create DMG Installer
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          echo "Packaging KillX-${TAG}.dmg..."
+          DMG_STAGE=".build/dmg-staging"
+          rm -rf "$DMG_STAGE"
+          mkdir -p "$DMG_STAGE"
+          cp -R .build/KillX.app "$DMG_STAGE/"
+          ln -s /Applications "$DMG_STAGE/Applications"
+          hdiutil create -volname "KillX" -srcfolder "$DMG_STAGE" -ov -format UDZO ".build/KillX-${TAG}.dmg"
+
+      - name: Write release notes
+        shell: bash
+        run: |
+          VERSION="${{ steps.meta.outputs.version }}"
+          awk -v version="$VERSION" '
+            $0 == "## " version { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > release-changes.md || true
+
+          cat > release-notes.md <<EOF
+          ## What's Changed
+
+          EOF
+
+          if [ -s release-changes.md ]; then
+            cat release-changes.md >> release-notes.md
+          else
+            echo "See commit history for changes included in this version." >> release-notes.md
+          fi
+
+          cat >> release-notes.md <<EOF
+
+          ## Install
+
+          1. Download \`KillX-${{ steps.meta.outputs.tag }}.dmg\` from Assets below.
+          2. Open the disk image and drag **KillX** to your \`/Applications\` folder.
+
+          **Full changelog:** https://github.com/${{ github.repository }}/commits/${{ steps.meta.outputs.tag }}
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: ${{ steps.meta.outputs.tag }}
+          body_path: release-notes.md
+          files: .build/KillX-*.dmg
+          draft: false
+          prerelease: false
+

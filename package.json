@@ -1,0 +1,15 @@
+{
+  "name": "killx-macos-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build, install, and launch the native KillX macOS app.",
+  "scripts": {
+    "build": "make bundle",
+    "test": "make test",
+    "clean": "make clean",
+    "install": "npm run build && mkdir -p \"$HOME/Applications\" && ditto .build/KillX.app \"$HOME/Applications/KillX.app\"",
+    "open": "open \"$HOME/Applications/KillX.app\"",
+    "ship": "./Scripts/ship.sh",
+    "start": "npm run ship"
+  }
+}
