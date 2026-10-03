@@ -50,7 +50,7 @@ struct WelcomeView: View {
         }
         .frame(width: 360, height: 370)
         .background(KillXTheme.windowBackground)
-        .ignoresSafeArea(edges: .top)
+        .ignoresSafeArea()
     }
 
     private var hero: some View {

@@ -424,7 +424,7 @@ private struct PopoverOptionsButton: NSViewRepresentable {
             menu.addItem(.separator())
 
             menu.addItem(MenuHelper.makeItem(
-                title: "Quit KillX",
+                title: "Quit",
                 action: #selector(quitApp),
                 target: self,
                 keyEquivalent: "q",

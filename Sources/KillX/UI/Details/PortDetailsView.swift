@@ -81,9 +81,11 @@ struct PortDetailsView: View {
                         detailRow(label: "Port Mappings", value: docker.ports)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 18)
                 .padding(.vertical, 10)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Divider()
 
@@ -126,9 +128,9 @@ struct PortDetailsView: View {
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
         }
-        .frame(width: 440, height: 380)
+        .frame(minWidth: 440, maxWidth: .infinity, minHeight: 380, maxHeight: .infinity)
         .background(KillXTheme.windowBackground)
-        .ignoresSafeArea(edges: .top)
+        .ignoresSafeArea()
     }
 
     private var header: some View {
@@ -152,6 +154,7 @@ struct PortDetailsView: View {
                 .textSelection(.enabled)
                 .lineLimit(3)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func copyAllDetails() {
@@ -200,12 +203,14 @@ final class PortDetailsWindowController: NSObject, NSWindowDelegate {
         let hosting = NSHostingController(rootView: rootView)
         let win = NSWindow(contentViewController: hosting)
         win.title = ""
-        win.styleMask = [.titled, .closable, .resizable, .fullSizeContentView]
+        win.styleMask = [.titled, .closable, .fullSizeContentView]
         win.titlebarAppearsTransparent = true
         win.titlebarSeparatorStyle = .none
         win.titleVisibility = .hidden
         win.setContentSize(NSSize(width: 440, height: 380))
-        win.minSize = NSSize(width: 380, height: 280)
+        win.minSize = win.frame.size
+        win.maxSize = win.frame.size
+        win.collectionBehavior = [.fullScreenNone]
         win.isOpaque = true
         win.isReleasedWhenClosed = false
         win.backgroundColor = KillXTheme.windowBackgroundNSColor

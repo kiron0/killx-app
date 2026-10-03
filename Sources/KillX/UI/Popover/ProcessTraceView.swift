@@ -121,8 +121,10 @@ struct ProcessTraceWindowView: View {
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.vertical, 8)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Divider()
 
@@ -138,9 +140,9 @@ struct ProcessTraceWindowView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
         }
-        .frame(width: 460, height: 380)
+        .frame(minWidth: 460, maxWidth: .infinity, minHeight: 380, maxHeight: .infinity)
         .background(KillXTheme.windowBackground)
-        .ignoresSafeArea(edges: .top)
+        .ignoresSafeArea()
     }
 
     private var header: some View {
@@ -177,12 +179,14 @@ final class ProcessTraceWindowController: NSObject, NSWindowDelegate {
             let hosting = NSHostingController(rootView: rootView)
             let win = NSWindow(contentViewController: hosting)
             win.title = ""
-            win.styleMask = [.titled, .closable, .resizable, .fullSizeContentView]
+            win.styleMask = [.titled, .closable, .fullSizeContentView]
             win.titlebarAppearsTransparent = true
             win.titlebarSeparatorStyle = .none
             win.titleVisibility = .hidden
             win.setContentSize(NSSize(width: 460, height: 380))
-            win.minSize = NSSize(width: 380, height: 260)
+            win.minSize = win.frame.size
+            win.maxSize = win.frame.size
+            win.collectionBehavior = [.fullScreenNone]
             win.isOpaque = true
             win.isReleasedWhenClosed = false
             win.backgroundColor = KillXTheme.windowBackgroundNSColor
