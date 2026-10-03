@@ -1,19 +1,38 @@
 import AppKit
 import SwiftUI
 
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItemController: StatusItemController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-
         NSApp.setActivationPolicy(.accessory)
+
+        Task { @MainActor [weak self] in
+            guard await SingleInstanceService.shared.prepareForLaunch() else {
+                NSApp.terminate(nil)
+                return
+            }
+            self?.finishLaunching()
+        }
+    }
+
+    private func finishLaunching() {
         statusItemController = StatusItemController()
+        SingleInstanceService.shared.startMonitoring()
         _ = ShortcutManager.shared
         WelcomeWindowController.shared.showIfFirstLaunch()
 
-        let handleShowSettings: (Notification) -> Void = { notif in
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard ConfigStore.shared.config.autoUpdate else { return }
+            await UpdateChecker.shared.checkForUpdates(isUserInitiated: false)
+        }
+
+        let handleShowSettings: @Sendable (Notification) -> Void = { notif in
+            let rawTab = notif.userInfo?["tab"] as? String
             Task { @MainActor in
-                let tab = (notif.userInfo?["tab"] as? String).flatMap { SettingsTab(rawValue: $0) }
+                let tab = rawTab.flatMap { SettingsTab(rawValue: $0) }
                 SettingsWindowController.shared.show(tab: tab)
             }
         }
@@ -42,6 +61,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        SingleInstanceService.shared.stopMonitoring()
         statusItemController = nil
     }
 

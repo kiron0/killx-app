@@ -7,20 +7,28 @@ struct DevServerRowView: View {
 
     private let accentColor = KillXTheme.accent
 
+    private var isSelected: Bool {
+        vm.selectedPorts.contains(server.port.id)
+    }
+
     var body: some View {
         HStack(spacing: 8) {
-            // Checkbox
-            Button {
-                vm.toggleSelection(for: server.port)
-            } label: {
-                Image(systemName: vm.selectedPorts.contains(server.port.id) ? "checkmark.square.fill" : "square")
-                    .font(.system(size: 13))
-                    .foregroundStyle(vm.selectedPorts.contains(server.port.id) ? accentColor : Color.secondary.opacity(0.6))
+            // Checkbox (QuitX replica)
+            ZStack {
+                RoundedRectangle(cornerRadius: 2.5)
+                    .fill(isSelected ? accentColor : Color.primary.opacity(0.08))
+                    .frame(width: 14, height: 14)
+
+                if isSelected {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.black.opacity(0.9))
+                }
             }
-            .buttonStyle(.plain)
+            .contentShape(Rectangle())
 
             // Port badge
-            Text(":\(server.port.port)")
+            Text(verbatim: ":\(server.port.port)")
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2)
@@ -34,9 +42,10 @@ struct DevServerRowView: View {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 4) {
                     Text(server.projectName)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 12.5, weight: .semibold))
                         .foregroundStyle(Color.primary)
                         .lineLimit(1)
+                        .truncationMode(.tail)
 
                     Text("(\(server.port.processName))")
                         .font(.system(size: 10))
@@ -49,9 +58,22 @@ struct DevServerRowView: View {
                     .lineLimit(1)
             }
 
-            Spacer()
+            Spacer(minLength: 4)
 
-            // Tree kill button
+            // Trace button (standalone dialog)
+            Button {
+                ProcessTraceWindowController.shared.show(port: server.port)
+            } label: {
+                Image(systemName: "point.filled.topleft.down.curvedto.point.bottomright.up")
+                    .font(.system(size: 9.5, weight: .semibold))
+                    .frame(width: 17, height: 17)
+                    .background(Color.primary.opacity(0.06))
+                    .clipShape(RoundedRectangle(cornerRadius: 3.5))
+            }
+            .buttonStyle(.plain)
+            .help("Trace dev server process ancestry")
+
+            // Tree kill button (QuitX replica style)
             Button {
                 vm.confirmAndKillDevServer(server, force: vm.isOptionKeyPressed)
             } label: {
@@ -71,6 +93,10 @@ struct DevServerRowView: View {
             .help("Terminate dev server and process tree")
         }
         .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.vertical, 3.5)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            vm.toggleSelection(for: server.port)
+        }
     }
 }

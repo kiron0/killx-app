@@ -25,10 +25,13 @@ struct MainPopoverView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            Color.clear
+                .frame(height: 12)
+
             // Filter mode: All Ports | Dev Servers
             filterSwitcher
                 .padding(.horizontal, 8)
-                .padding(.top, 6)
+                .padding(.top, 5)
                 .padding(.bottom, 4)
 
             // Primary action button
@@ -42,9 +45,7 @@ struct MainPopoverView: View {
                 .padding(.bottom, 4)
 
             // Main Content Area
-            if vm.isTracingTree {
-                ProcessTraceView(vm: vm)
-            } else if vm.isLoading && vm.ports.isEmpty {
+            if vm.isLoading && vm.ports.isEmpty {
                 VStack {
                     Spacer()
                     ProgressView()
@@ -54,23 +55,8 @@ struct MainPopoverView: View {
                 .frame(maxHeight: .infinity)
             } else if vm.filteredPorts.isEmpty {
                 emptyPortsView
-            } else if vm.listNeedsScrolling {
-                ScrollView(.vertical, showsIndicators: true) {
-                    VStack(spacing: 2) {
-                        ForEach(vm.filteredPorts) { port in
-                            PortRowView(port: port, vm: vm)
-                        }
-                    }
-                    .padding(.vertical, 2)
-                }
             } else {
-                VStack(spacing: 2) {
-                    ForEach(vm.filteredPorts) { port in
-                        PortRowView(port: port, vm: vm)
-                    }
-                }
-                .padding(.vertical, 2)
-                .fixedSize(horizontal: false, vertical: true)
+                PortListView(vm: vm)
             }
 
             footerRow
@@ -80,12 +66,15 @@ struct MainPopoverView: View {
         }
         .frame(width: 280)
         .frame(maxHeight: .infinity)
-        .background(KillXTheme.popoverBackground)
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(
+            KillXTheme.popoverBackground
+                .clipShape(PopoverContainerShape(arrowX: vm.arrowX, cornerRadius: 10))
+        )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            PopoverContainerShape(arrowX: vm.arrowX, cornerRadius: 10)
                 .stroke(Color.primary.opacity(0.12), lineWidth: 0.5)
         )
+        .clipShape(PopoverContainerShape(arrowX: vm.arrowX, cornerRadius: 10))
         .onAppear {
             isSearchFocused = false
         }
@@ -100,7 +89,7 @@ struct MainPopoverView: View {
         }
         .overlay(alignment: .bottom) {
             if vm.showToast {
-                ToastView(count: vm.lastQuitCount, message: vm.lastActionMessage.isEmpty ? nil : vm.lastActionMessage)
+                ToastView(message: vm.toastMessage, isError: vm.toastIsError)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .padding(.bottom, 36)
             }

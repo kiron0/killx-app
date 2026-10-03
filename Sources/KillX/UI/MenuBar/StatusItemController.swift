@@ -162,19 +162,22 @@ final class StatusItemController: NSObject {
             calculated = max(calculated, 240)
         }
 
+        let arrowHeight: CGFloat = 12
         let screen = statusItem.button?.window?.screen ?? NSScreen.main
         let screenHeight = screen?.visibleFrame.height ?? 800
-        let maximumHeight = max(100, screenHeight - 48)
+        // Cap maximum height to 420px (QuitX replica pattern) so it never overflows display
+        let maximumHeight = min(420, max(180, screenHeight - 60))
         let targetHeight = min(maximumHeight, calculated)
         AppListViewModel.shared.listNeedsScrolling = calculated > maximumHeight
 
-        let newSize = NSSize(width: 280, height: targetHeight)
+        let totalHeight = targetHeight + arrowHeight
+        let newSize = NSSize(width: 280, height: totalHeight)
         guard let win = window else { return }
 
         var frame = win.frame
         let oldHeight = frame.height
         frame.size = newSize
-        frame.origin.y += (oldHeight - targetHeight)
+        frame.origin.y += (oldHeight - totalHeight)
 
         if let button = statusItem.button, let btnWindow = button.window {
             let buttonScreenRect = btnWindow.convertToScreen(button.bounds)
@@ -185,11 +188,15 @@ final class StatusItemController: NSObject {
                 let screenMaxX = scr.visibleFrame.maxX
                 originX = max(screenMinX + 4, min(originX, screenMaxX - newSize.width - 4))
             }
-            let originY = buttonScreenRect.minY - targetHeight - 4
+            let originY = buttonScreenRect.minY - totalHeight - 2
             frame.origin = NSPoint(x: originX, y: originY)
+
+            let arrowX = max(18, min(buttonScreenRect.midX - originX, newSize.width - 18))
+            AppListViewModel.shared.arrowX = arrowX
         }
 
         win.setFrame(frame, display: true, animate: false)
+        win.invalidateShadow()
     }
 
     @objc private func handleStatusItemClick(_ sender: Any?) {

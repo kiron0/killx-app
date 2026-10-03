@@ -38,6 +38,11 @@ final class AppListViewModel: ObservableObject {
     @Published var inspectedAncestry: [ProcessTreeNodeInfo] = []
     @Published var isTracingTree: Bool = false
     @Published var pendingKillConfirmation: KillConfirmationRequest? = nil
+    @Published var arrowX: CGFloat = 135
+    @Published var toastMessage: String = ""
+    @Published var toastIsError: Bool = false
+    @Published var pendingPortIds: Set<String> = []
+    @Published var isBatchKilling: Bool = false
 
     private var hasInitializedSelection = false
 
@@ -81,6 +86,9 @@ final class AppListViewModel: ObservableObject {
 
     var filteredPorts: [PortInfo] {
         var list = ports
+        let excluded = Set(configStore.config.excludePorts)
+        list = list.filter { !excluded.contains($0.port) }
+
         if filterMode == .dev {
             list = list.filter(\.isDevServer)
         }
@@ -92,6 +100,15 @@ final class AppListViewModel: ObservableObject {
             $0.command.lowercased().contains(q) ||
             ($0.docker?.name.lowercased().contains(q) == true) ||
             ($0.cwd?.lowercased().contains(q) == true)
+        }
+    }
+
+    func excludePort(_ portNumber: Int) {
+        if !configStore.config.excludePorts.contains(portNumber) {
+            configStore.config.excludePorts.append(portNumber)
+            configStore.save()
+            showToastMessage("Port :\(portNumber) added to exclude list")
+            StatusItemController.shared?.updatePopoverSize()
         }
     }
 
@@ -392,8 +409,10 @@ final class AppListViewModel: ObservableObject {
         inspectedAncestry = []
     }
 
-    private func showToastMessage(_ msg: String) {
+    func showToastMessage(_ msg: String, isError: Bool = false) {
         lastActionMessage = msg
+        toastMessage = msg
+        toastIsError = isError
         triggerToast()
     }
 
