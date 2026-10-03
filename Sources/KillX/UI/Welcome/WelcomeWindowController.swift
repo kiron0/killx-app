@@ -41,10 +41,11 @@ final class WelcomeWindowController: NSObject, NSWindowDelegate {
 
         let hosting = NSHostingController(rootView: rootView)
         let win = NSWindow(contentViewController: hosting)
-        win.title = "Welcome to KillX"
-        win.styleMask = [.titled, .closable]
+        win.title = ""
+        win.styleMask = [.titled, .closable, .fullSizeContentView]
         win.titlebarAppearsTransparent = true
-        win.titleVisibility = .visible
+        win.titlebarSeparatorStyle = .none
+        win.titleVisibility = .hidden
         win.setContentSize(NSSize(width: 360, height: 370))
         win.isOpaque = true
         win.backgroundColor = KillXTheme.windowBackgroundNSColor

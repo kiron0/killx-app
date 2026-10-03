@@ -14,7 +14,9 @@ struct PortDetailsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            header
+
+            // Header info
             HStack(spacing: 12) {
                 Text(verbatim: ":\(port.port)")
                     .font(.system(size: 18, weight: .bold, design: .monospaced))
@@ -39,7 +41,7 @@ struct PortDetailsView: View {
                 Spacer()
             }
             .padding(.horizontal, 18)
-            .padding(.top, 16)
+            .padding(.top, 4)
             .padding(.bottom, 12)
 
             Divider()
@@ -79,7 +81,8 @@ struct PortDetailsView: View {
                         detailRow(label: "Port Mappings", value: docker.ports)
                     }
                 }
-                .padding(18)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 10)
             }
 
             Divider()
@@ -125,6 +128,16 @@ struct PortDetailsView: View {
         }
         .frame(width: 440, height: 380)
         .background(KillXTheme.windowBackground)
+        .ignoresSafeArea(edges: .top)
+    }
+
+    private var header: some View {
+        Text("Port :\(port.port) Details")
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(Color.primary)
+            .frame(maxWidth: .infinity)
+            .frame(height: 38)
+            .background(KillXTheme.windowBackground)
     }
 
     private func detailRow(label: String, value: String) -> some View {
@@ -178,7 +191,6 @@ final class PortDetailsWindowController: NSObject, NSWindowDelegate {
         if let win = self.window {
             let rootView = PortDetailsView(port: port, onClose: { [weak self] in self?.close() })
             win.contentViewController = NSHostingController(rootView: rootView)
-            win.title = "Port :\(port.port) Details"
             win.makeKeyAndOrderFront(nil)
             NSApp.activate(ignoringOtherApps: true)
             return
@@ -187,18 +199,20 @@ final class PortDetailsWindowController: NSObject, NSWindowDelegate {
         let rootView = PortDetailsView(port: port, onClose: { [weak self] in self?.close() })
         let hosting = NSHostingController(rootView: rootView)
         let win = NSWindow(contentViewController: hosting)
-        win.title = "Port :\(port.port) Details"
+        win.title = ""
         win.styleMask = [.titled, .closable, .resizable, .fullSizeContentView]
         win.titlebarAppearsTransparent = true
-        win.titleVisibility = .visible
+        win.titlebarSeparatorStyle = .none
+        win.titleVisibility = .hidden
         win.setContentSize(NSSize(width: 440, height: 380))
         win.minSize = NSSize(width: 380, height: 280)
         win.isOpaque = true
+        win.isReleasedWhenClosed = false
         win.backgroundColor = KillXTheme.windowBackgroundNSColor
         win.appearance = NSApp.effectiveAppearance
-        win.isReleasedWhenClosed = false
-        win.center()
+        win.isMovableByWindowBackground = true
         win.delegate = self
+        win.center()
         self.window = win
 
         win.makeKeyAndOrderFront(nil)

@@ -10,7 +10,9 @@ struct ProcessTraceWindowView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Header
+            header
+
+            // Header info
             HStack(spacing: 12) {
                 Text(verbatim: ":\(port.port)")
                     .font(.system(size: 16, weight: .bold, design: .monospaced))
@@ -51,7 +53,8 @@ struct ProcessTraceWindowView: View {
                 .buttonStyle(.plain)
             }
             .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.top, 4)
+            .padding(.bottom, 12)
 
             Divider()
 
@@ -118,7 +121,7 @@ struct ProcessTraceWindowView: View {
                         }
                     }
                 }
-                .padding(.vertical, 12)
+                .padding(.vertical, 8)
             }
 
             Divider()
@@ -134,10 +137,19 @@ struct ProcessTraceWindowView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(Color.primary.opacity(0.02))
         }
         .frame(width: 460, height: 380)
         .background(KillXTheme.windowBackground)
+        .ignoresSafeArea(edges: .top)
+    }
+
+    private var header: some View {
+        Text("Process Tree — Port :\(port.port)")
+            .font(.system(size: 13, weight: .semibold))
+            .foregroundStyle(Color.primary)
+            .frame(maxWidth: .infinity)
+            .frame(height: 38)
+            .background(KillXTheme.windowBackground)
     }
 }
 
@@ -156,7 +168,6 @@ final class ProcessTraceWindowController: NSObject, NSWindowDelegate {
             if let win = self.window {
                 let rootView = ProcessTraceWindowView(port: port, ancestry: ancestry, onClose: { [weak self] in self?.close() })
                 win.contentViewController = NSHostingController(rootView: rootView)
-                win.title = "Process Tree — Port :\(port.port)"
                 win.makeKeyAndOrderFront(nil)
                 NSApp.activate(ignoringOtherApps: true)
                 return
@@ -165,18 +176,20 @@ final class ProcessTraceWindowController: NSObject, NSWindowDelegate {
             let rootView = ProcessTraceWindowView(port: port, ancestry: ancestry, onClose: { [weak self] in self?.close() })
             let hosting = NSHostingController(rootView: rootView)
             let win = NSWindow(contentViewController: hosting)
-            win.title = "Process Tree — Port :\(port.port)"
+            win.title = ""
             win.styleMask = [.titled, .closable, .resizable, .fullSizeContentView]
             win.titlebarAppearsTransparent = true
-            win.titleVisibility = .visible
+            win.titlebarSeparatorStyle = .none
+            win.titleVisibility = .hidden
             win.setContentSize(NSSize(width: 460, height: 380))
             win.minSize = NSSize(width: 380, height: 260)
             win.isOpaque = true
+            win.isReleasedWhenClosed = false
             win.backgroundColor = KillXTheme.windowBackgroundNSColor
             win.appearance = NSApp.effectiveAppearance
-            win.isReleasedWhenClosed = false
-            win.center()
+            win.isMovableByWindowBackground = true
             win.delegate = self
+            win.center()
             self.window = win
 
             win.makeKeyAndOrderFront(nil)

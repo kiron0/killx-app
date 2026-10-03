@@ -284,6 +284,13 @@ final class StatusItemController: NSObject {
             systemSymbolName: "gearshape"
         ))
 
+        menu.addItem(MenuHelper.makeItem(
+            title: "Welcome Guide",
+            action: #selector(openWelcomeGuide),
+            target: self,
+            systemSymbolName: "hand.wave"
+        ))
+
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(MenuHelper.makeItem(

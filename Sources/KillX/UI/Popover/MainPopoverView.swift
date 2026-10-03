@@ -406,6 +406,13 @@ private struct PopoverOptionsButton: NSViewRepresentable {
             ))
 
             menu.addItem(MenuHelper.makeItem(
+                title: "Welcome Guide",
+                action: #selector(openWelcomeGuide),
+                target: self,
+                systemSymbolName: "hand.wave"
+            ))
+
+            menu.addItem(MenuHelper.makeItem(
                 title: "Help & Docs",
                 action: #selector(openHelp),
                 target: self,
@@ -434,6 +441,11 @@ private struct PopoverOptionsButton: NSViewRepresentable {
         @objc private func openSettings() {
             StatusItemController.shared?.closePopover()
             SettingsWindowController.shared.show()
+        }
+
+        @objc private func openWelcomeGuide() {
+            StatusItemController.shared?.closePopover()
+            WelcomeWindowController.shared.show()
         }
 
         @objc private func openHelp() {
