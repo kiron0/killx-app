@@ -187,7 +187,7 @@ private struct HelpPopoverContentView: View {
                 .padding(.vertical, 10)
                 .frame(width: 230)
         }
-        .arrowPopoverChrome(arrowX: arrowX, classicBackground: AnyView(QuitXTheme.popoverBackground))
+        .arrowPopoverChrome(arrowX: arrowX, classicBackground: AnyView(KillXTheme.popoverBackground))
     }
 }
 
@@ -216,7 +216,7 @@ struct HelpPopoverButton: View {
             let isActive = state.isShowing || state.isHovered
             Image(systemName: "questionmark.circle")
                 .font(.system(size: 13, weight: isActive ? .medium : .regular))
-                .foregroundStyle(isActive ? QuitXTheme.accent : Color.secondary)
+                .foregroundStyle(isActive ? KillXTheme.accent : Color.secondary)
                 .frame(width: 20, height: 20)
                 .contentShape(Circle())
         }
@@ -264,15 +264,17 @@ struct SettingsContainerView: View {
                 ZStack(alignment: .top) {
                     LiquidGlassFill(shape: Rectangle())
                     if tabModel.glassTopInset > 0 {
-                        QuitXTheme.cardBackground
+                        KillXTheme.cardBackground
                             .frame(height: tabModel.glassTopInset)
                     }
                 }
                 .ignoresSafeArea()
             } else {
-                QuitXTheme.windowBackground
+                KillXTheme.windowBackground
             }
         }
+        .tint(KillXTheme.accent)
+        .accentColor(KillXTheme.accent)
         .onChange(of: tabModel.activeTab) { _, _ in
             HelpPopoverState.closeAll()
             NotificationCenter.default.post(name: KillXConstants.Notifications.dismissSettingsTooltips, object: nil)
@@ -295,7 +297,7 @@ fileprivate func toggle(_ title: String, isOn: Binding<Bool>) -> some View {
         isOn.wrappedValue.toggle()
     } label: {
         HStack(spacing: 8) {
-            QuitXSelectionCheckbox(isSelected: isOn.wrappedValue)
+            KillXSelectionCheckbox(isSelected: isOn.wrappedValue)
 
             Text(title)
                 .font(.system(size: 12, weight: .regular))
@@ -311,13 +313,13 @@ fileprivate func appearanceRadio(_ title: String, selected: Bool, action: @escap
             ZStack {
                 Circle()
                     .strokeBorder(
-                        selected ? QuitXTheme.accent : Color.secondary.opacity(0.5),
+                        selected ? KillXTheme.accent : Color.secondary.opacity(0.5),
                         lineWidth: 1.5
                     )
                     .frame(width: 14, height: 14)
                 if selected {
                     Circle()
-                        .fill(QuitXTheme.accent)
+                        .fill(KillXTheme.accent)
                         .frame(width: 7, height: 7)
                 }
             }
@@ -493,7 +495,7 @@ struct GeneralTabCloneView: View {
         .frame(width: 480, height: tabHeight, alignment: .topLeading)
         .overlay {
             if viewState.showResetConfirmation {
-                QuitConfirmationOverlay(
+                KillConfirmationOverlay(
                     title: "Reset All Preferences?",
                     subtitle: "This will restore KillX to default factory settings.",
                     confirmTitle: "Reset All",
@@ -686,7 +688,7 @@ struct ShortcutsTabCloneView: View {
             Spacer(minLength: 0)
         }
         .frame(width: 480, height: 221)
-        .background(QuitXTheme.paneBackground)
+        .background(KillXTheme.paneBackground)
         .onAppear {
             viewState.startMonitor(sm: sm)
         }
@@ -713,7 +715,7 @@ struct ShortcutsTabCloneView: View {
             Button {
                 isEnabled.wrappedValue.toggle()
             } label: {
-                QuitXSelectionCheckbox(isSelected: active)
+                KillXSelectionCheckbox(isSelected: active)
             }
             .buttonStyle(.plain)
 
@@ -726,7 +728,7 @@ struct ShortcutsTabCloneView: View {
                     if isRecording {
                         Text("Type keys...")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(QuitXTheme.accent)
+                            .foregroundStyle(KillXTheme.accent)
                     } else if keyList.isEmpty {
                         Text("None")
                             .font(.system(size: 11, weight: .regular))
@@ -753,7 +755,7 @@ struct ShortcutsTabCloneView: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 5)
-                        .stroke(isRecording ? QuitXTheme.accent : Color.clear, lineWidth: 1.5)
+                        .stroke(isRecording ? KillXTheme.accent : Color.clear, lineWidth: 1.5)
                 )
             }
             .buttonStyle(.plain)
@@ -795,7 +797,7 @@ struct SupportTabCloneView: View {
             HStack(spacing: 11) {
                 Image(systemName: "envelope.badge.fill")
                     .font(.system(size: 14))
-                    .foregroundStyle(QuitXTheme.accent)
+                    .foregroundStyle(KillXTheme.accent)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Questions, feedback or ideas?")
@@ -821,16 +823,16 @@ struct SupportTabCloneView: View {
                         Image(systemName: "arrow.up.right")
                             .font(.system(size: 8.5, weight: .bold))
                     }
-                    .foregroundStyle(viewState.isContactHovered ? QuitXTheme.accent : Color.primary)
+                    .foregroundStyle(viewState.isContactHovered ? KillXTheme.accent : Color.primary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(viewState.isContactHovered ? QuitXTheme.accent.opacity(0.14) : Color.primary.opacity(0.06))
+                            .fill(viewState.isContactHovered ? KillXTheme.accent.opacity(0.14) : Color.primary.opacity(0.06))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(viewState.isContactHovered ? QuitXTheme.accent.opacity(0.35) : Color.primary.opacity(0.1), lineWidth: 0.5)
+                            .stroke(viewState.isContactHovered ? KillXTheme.accent.opacity(0.35) : Color.primary.opacity(0.1), lineWidth: 0.5)
                     )
                 }
                 .buttonStyle(.plain)
@@ -838,7 +840,7 @@ struct SupportTabCloneView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
-            .background(QuitXTheme.cardBackground, in: RoundedRectangle(cornerRadius: 8))
+            .background(KillXTheme.cardBackground, in: RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(Color.primary.opacity(0.09), lineWidth: 0.5)

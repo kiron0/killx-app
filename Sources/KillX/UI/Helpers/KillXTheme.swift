@@ -1,7 +1,7 @@
 import SwiftUI
 import AppKit
 
-enum QuitXTheme {
+enum KillXTheme {
     static let accent = Color(red: 232/255, green: 50/255, blue: 62/255)
     static let accentNSColor = NSColor(srgbRed: 232/255, green: 50/255, blue: 62/255, alpha: 1.0)
     static let accentSecondary = Color(red: 200/255, green: 30/255, blue: 42/255)
@@ -59,8 +59,6 @@ enum QuitXTheme {
         }
     }
 }
-
-typealias KillXTheme = QuitXTheme
 
 struct VisualEffectBlur: NSViewRepresentable {
     var material: NSVisualEffectView.Material = .popover

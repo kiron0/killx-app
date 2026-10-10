@@ -55,7 +55,7 @@ struct MainPopoverView: View {
         .frame(width: StatusItemController.popoverWidth)
         .frame(minHeight: 220)
         .frame(maxHeight: .infinity)
-        .arrowPopoverChrome(arrowX: vm.arrowX, classicBackground: AnyView(QuitXTheme.popoverBackground))
+        .arrowPopoverChrome(arrowX: vm.arrowX, classicBackground: AnyView(KillXTheme.popoverBackground))
         .overlay(alignment: .bottom) {
             if vm.showToast {
                 ToastView(
@@ -69,7 +69,7 @@ struct MainPopoverView: View {
         .animation(.easeInOut(duration: 0.2), value: vm.showToast)
         .overlay {
             if let req = vm.pendingKillConfirmation {
-                QuitConfirmationOverlay(
+                KillConfirmationOverlay(
                     title: req.title,
                     subtitle: req.message,
                     confirmTitle: req.confirmButtonTitle,
@@ -91,6 +91,8 @@ struct MainPopoverView: View {
         }
         .animation(.easeInOut(duration: 0.18), value: vm.pendingKillConfirmation != nil)
         .clipShape(popoverShape(arrowX: vm.arrowX))
+        .tint(Self.accentColor)
+        .accentColor(Self.accentColor)
         .onChange(of: vm.visibleCount) {
             StatusItemController.shared?.updatePopoverSize()
         }
@@ -164,7 +166,7 @@ struct MainPopoverView: View {
             Button {
                 vm.toggleSelectAll()
             } label: {
-                QuitXSelectionCheckbox(
+                KillXSelectionCheckbox(
                     isSelected: vm.isAllSelected,
                     isPartial: vm.isPartiallySelected
                 )
@@ -236,7 +238,7 @@ struct MainPopoverView: View {
 
             Spacer(minLength: 8)
 
-            QuitXMenuButton(
+            KillXMenuButton(
                 assetName: "settings",
                 selectedAssetName: "settings-selected",
                 systemSymbolName: "gearshape",

@@ -6,13 +6,11 @@ final class ConfigStore: ObservableObject {
     @Published var config: KillXConfig = .default
 
     private static let userDefaultsKey = "KillXConfig"
-    private static let legacyUserDefaultsKey = "QuitXConfig"
 
     private init() { load() }
 
     func load() {
-        let key = UserDefaults.standard.data(forKey: Self.userDefaultsKey) != nil ? Self.userDefaultsKey : Self.legacyUserDefaultsKey
-        guard let data = UserDefaults.standard.data(forKey: key),
+        guard let data = UserDefaults.standard.data(forKey: Self.userDefaultsKey),
               let decoded = try? JSONDecoder().decode(KillXConfig.self, from: data) else {
             return
         }

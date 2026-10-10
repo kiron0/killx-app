@@ -148,7 +148,7 @@ struct ProcessTraceWindowView: View {
                 LiquidGlassFill(shape: Rectangle())
                     .ignoresSafeArea()
             } else {
-                QuitXTheme.windowBackground
+                KillXTheme.windowBackground
                     .ignoresSafeArea()
             }
         }
@@ -161,7 +161,7 @@ struct ProcessTraceWindowView: View {
             .foregroundStyle(Color.primary)
             .frame(maxWidth: .infinity)
             .frame(height: 38)
-            .background(QuitXTheme.cardBackground)
+            .background(KillXTheme.cardBackground)
     }
 }
 
@@ -204,7 +204,7 @@ final class ProcessTraceWindowController: NSObject, NSWindowDelegate {
                 win.backgroundColor = .clear
             } else {
                 win.isOpaque = true
-                win.backgroundColor = QuitXTheme.windowBackgroundNSColor
+                win.backgroundColor = KillXTheme.windowBackgroundNSColor
             }
             win.isReleasedWhenClosed = false
             win.appearance = NSApp.effectiveAppearance

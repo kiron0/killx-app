@@ -125,6 +125,7 @@ private enum MenuButtonImageCache {
                     rawData[i] = a
                     rawData[i + 1] = a
                     rawData[i + 2] = a
+                    rawData[i + 3] = a
                 }
             }
         }
@@ -161,7 +162,7 @@ final class MenuButtonState: ObservableObject {
     var imagePair: (normal: NSImage, hovered: NSImage)?
 }
 
-struct QuitXMenuButton: View {
+struct KillXMenuButton: View {
     var assetName: String? = nil
     var selectedAssetName: String? = nil
     var systemSymbolName: String? = nil
@@ -212,7 +213,7 @@ struct QuitXMenuButton: View {
         return Image(nsImage: img)
             .resizable()
             .renderingMode(.template)
-            .foregroundStyle(isActive ? QuitXTheme.accent : Color.secondary)
+            .foregroundStyle(isActive ? KillXTheme.accent : Color.secondary)
     }
 
     private func showMenu() {
@@ -232,5 +233,3 @@ struct QuitXMenuButton: View {
         }
     }
 }
-
-typealias KillXMenuButton = QuitXMenuButton

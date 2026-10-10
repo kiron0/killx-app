@@ -33,7 +33,7 @@ struct AppUpdateView: View {
                 LiquidGlassFill(shape: Rectangle())
                     .ignoresSafeArea()
             } else {
-                QuitXTheme.windowBackground
+                KillXTheme.windowBackground
                     .ignoresSafeArea()
             }
         }
@@ -75,7 +75,7 @@ struct AppUpdateView: View {
             case .available:
                 Image(systemName: "arrow.down.circle.fill")
                     .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, QuitXTheme.accent)
+                    .foregroundStyle(.white, KillXTheme.accent)
                     .font(.system(size: 18, weight: .bold))
                     .offset(x: 4, y: 4)
                     .transition(.scale.combined(with: .opacity))
@@ -166,7 +166,7 @@ struct AppUpdateView: View {
                 Button("OK") {
                     onDismiss()
                 }
-                .buttonStyle(UpdatePrimaryButtonStyle(color: QuitXTheme.accent))
+                .buttonStyle(UpdatePrimaryButtonStyle(color: KillXTheme.accent))
 
             case .available(_, let releaseURL):
                 Button("Later") {
@@ -178,7 +178,7 @@ struct AppUpdateView: View {
                     NSWorkspace.shared.open(releaseURL)
                     onDismiss()
                 }
-                .buttonStyle(UpdatePrimaryButtonStyle(color: QuitXTheme.accent))
+                .buttonStyle(UpdatePrimaryButtonStyle(color: KillXTheme.accent))
 
             case .failed:
                 Button("Cancel") {
@@ -191,7 +191,7 @@ struct AppUpdateView: View {
                         await checker.checkForUpdates(isUserInitiated: true)
                     }
                 }
-                .buttonStyle(UpdatePrimaryButtonStyle(color: QuitXTheme.accent))
+                .buttonStyle(UpdatePrimaryButtonStyle(color: KillXTheme.accent))
             }
         }
     }

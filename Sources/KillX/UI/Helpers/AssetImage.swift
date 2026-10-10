@@ -52,8 +52,6 @@ struct KillXAppIconView: View {
     }
 }
 
-typealias QuitXAppIconView = KillXAppIconView
-
 enum MenuHelper {
     final class ClosureMenuItem: NSMenuItem {
         private let handler: () -> Void

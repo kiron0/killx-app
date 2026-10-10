@@ -7,7 +7,7 @@ struct WelcomeView: View {
     @EnvironmentObject private var configStore: ConfigStore
     @ObservedObject private var launchService = LaunchAtLoginService.shared
 
-    private let gold = QuitXTheme.accent
+    private let accentColor = KillXTheme.accent
 
     var body: some View {
         VStack(spacing: 0) {
@@ -21,7 +21,7 @@ struct WelcomeView: View {
             Button("Get Started") {
                 onDismiss()
             }
-            .buttonStyle(WelcomePrimaryButtonStyle(color: gold))
+            .buttonStyle(WelcomePrimaryButtonStyle(color: accentColor))
             .padding(.horizontal, 22)
             .padding(.top, 16)
             .padding(.bottom, 22)
@@ -33,10 +33,12 @@ struct WelcomeView: View {
                 LiquidGlassFill(shape: Rectangle())
                     .ignoresSafeArea()
             } else {
-                QuitXTheme.windowBackground
+                KillXTheme.windowBackground
                     .ignoresSafeArea()
             }
         }
+        .tint(accentColor)
+        .accentColor(accentColor)
     }
 
     private var quickSetup: some View {
@@ -120,7 +122,7 @@ struct WelcomeView: View {
             isOn.wrappedValue.toggle()
         } label: {
             HStack(spacing: 8) {
-                QuitXSelectionCheckbox(isSelected: isOn.wrappedValue)
+                KillXSelectionCheckbox(isSelected: isOn.wrappedValue)
                 Text(title)
                     .font(.system(size: 12))
                     .foregroundStyle(Color.primary)

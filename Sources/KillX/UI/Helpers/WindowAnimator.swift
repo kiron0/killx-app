@@ -32,11 +32,11 @@ enum WindowAnimator {
                 window.backgroundColor = .clear
             } else {
                 window.isOpaque = true
-                window.backgroundColor = QuitXTheme.toolbarBackgroundNSColor
+                window.backgroundColor = KillXTheme.toolbarBackgroundNSColor
             }
         } else {
             window.isOpaque = true
-            window.backgroundColor = QuitXTheme.windowBackgroundNSColor
+            window.backgroundColor = KillXTheme.windowBackgroundNSColor
         }
 
         window.animationBehavior = .none

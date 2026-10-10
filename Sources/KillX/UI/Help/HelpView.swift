@@ -250,11 +250,13 @@ struct HelpView: View {
                 LiquidGlassFill(shape: Rectangle())
                     .ignoresSafeArea()
             } else {
-                QuitXTheme.windowBackground
+                KillXTheme.windowBackground
                     .ignoresSafeArea()
             }
         }
         .ignoresSafeArea()
+        .tint(KillXTheme.accent)
+        .accentColor(KillXTheme.accent)
         .onChange(of: state.searchText) {
             guard !filteredTopics.contains(where: { $0.id == state.selection }) else { return }
             state.selection = filteredTopics.first?.id
@@ -271,7 +273,7 @@ struct HelpView: View {
         }
         .frame(width: 220)
         .frame(maxHeight: .infinity)
-        .background(QuitXTheme.cardBackground)
+        .background(KillXTheme.cardBackground)
     }
 
     private var stickySearchHeader: some View {
@@ -279,7 +281,7 @@ struct HelpView: View {
             HStack(spacing: 6) {
                 Image(systemName: "magnifyingglass")
                     .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(state.searchText.isEmpty ? Color.secondary.opacity(0.85) : QuitXTheme.accent)
+                    .foregroundStyle(state.searchText.isEmpty ? Color.secondary.opacity(0.85) : KillXTheme.accent)
 
                 TextField("Search help…", text: $state.searchText)
                     .textFieldStyle(.plain)
@@ -310,7 +312,7 @@ struct HelpView: View {
                     .strokeBorder(
                         state.searchText.isEmpty
                             ? Color.primary.opacity(0.09)
-                            : QuitXTheme.accent.opacity(0.55),
+                            : KillXTheme.accent.opacity(0.55),
                         lineWidth: 1
                     )
             )
@@ -357,7 +359,7 @@ struct HelpView: View {
             HStack(spacing: 8) {
                 Image(systemName: topic.symbol)
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(isSelected ? QuitXTheme.accent : Color.secondary)
+                    .foregroundStyle(isSelected ? KillXTheme.accent : Color.secondary)
                     .frame(width: 18)
 
                 Text(topic.title)
@@ -371,7 +373,7 @@ struct HelpView: View {
             .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? QuitXTheme.accent.opacity(0.18) : (state.hoveredTopicId == topic.id ? Color.primary.opacity(0.05) : Color.clear))
+                    .fill(isSelected ? KillXTheme.accent.opacity(0.18) : (state.hoveredTopicId == topic.id ? Color.primary.opacity(0.05) : Color.clear))
             )
             .contentShape(Rectangle())
         }
@@ -407,11 +409,11 @@ struct HelpView: View {
                 footerLinks(for: topic)
                     .padding(.horizontal, 28)
                     .padding(.vertical, 14)
-                    .background(QuitXTheme.paneBackground)
+                    .background(KillXTheme.paneBackground)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .id(topic.id)
-            .background(QuitXTheme.paneBackground)
+            .background(KillXTheme.paneBackground)
         } else {
             VStack(spacing: 9) {
                 Image(systemName: "questionmark.circle")
@@ -421,7 +423,7 @@ struct HelpView: View {
                     .font(.system(size: 14, weight: .semibold))
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(QuitXTheme.paneBackground)
+            .background(KillXTheme.paneBackground)
         }
     }
 
@@ -469,7 +471,7 @@ struct HelpView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
-            .background(QuitXTheme.cardBackground, in: RoundedRectangle(cornerRadius: 8))
+            .background(KillXTheme.cardBackground, in: RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(Color.primary.opacity(0.09), lineWidth: 0.5)

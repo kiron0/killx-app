@@ -1,5 +1,28 @@
 // swift-tools-version: 5.9
 import PackageDescription
+import Foundation
+
+let cltTestingFrameworkPath = "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"
+let needsCLTTestingSearchPath = FileManager.default.fileExists(
+    atPath: cltTestingFrameworkPath + "/Testing.framework"
+)
+
+var testSwiftSettings: [SwiftSetting] = []
+var testLinkerSettings: [LinkerSetting] = []
+
+if needsCLTTestingSearchPath {
+    testSwiftSettings = [
+        .unsafeFlags(["-F", cltTestingFrameworkPath])
+    ]
+    testLinkerSettings = [
+        .unsafeFlags([
+            "-F", cltTestingFrameworkPath,
+            "-framework", "Testing",
+            "-Xlinker", "-rpath", "-Xlinker", cltTestingFrameworkPath,
+            "-Xlinker", "-rpath", "-Xlinker", "/Library/Developer/CommandLineTools/Library/Developer/usr/lib"
+        ])
+    ]
+}
 
 let package = Package(
     name: "KillX",
@@ -17,29 +40,8 @@ let package = Package(
             name: "KillXTests",
             dependencies: ["KillX"],
             path: "Tests/KillXTests",
-            swiftSettings: [
-                .unsafeFlags([
-                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
-                    "-F", "/Applications/Xcode_16.2.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
-                    "-F", "/Applications/Xcode_16.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
-                    "-F", "/Applications/Xcode_16.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
-                    "-F", "/Applications/Xcode_16.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
-                    "-F", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
-                    "-F", "/Applications/Xcode_15.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks"
-                ])
-            ],
-            linkerSettings: [
-                .unsafeFlags([
-                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
-                    "-F", "/Applications/Xcode_16.2.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
-                    "-F", "/Applications/Xcode_16.1.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
-                    "-F", "/Applications/Xcode_16.0.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
-                    "-F", "/Applications/Xcode_16.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
-                    "-F", "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
-                    "-F", "/Applications/Xcode_15.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/Library/Frameworks",
-                    "-framework", "Testing"
-                ])
-            ]
+            swiftSettings: testSwiftSettings,
+            linkerSettings: testLinkerSettings
         ),
     ]
 )

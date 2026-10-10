@@ -5,7 +5,7 @@ private final class OverlayState: ObservableObject {
     @Published var isConfirmHovered = false
 }
 
-struct QuitConfirmationOverlay: View {
+struct KillConfirmationOverlay: View {
     let title: String
     let subtitle: String
     let confirmTitle: String
@@ -77,7 +77,7 @@ struct QuitConfirmationOverlay: View {
             VStack(spacing: 10) {
                 Image(systemName: systemImage)
                     .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(isForced ? Color.red : QuitXTheme.accent)
+                    .foregroundStyle(isForced ? Color.red : KillXTheme.accent)
 
                 VStack(spacing: 3) {
                     Text(title)
@@ -166,5 +166,3 @@ struct QuitConfirmationOverlay: View {
         .allowsHitTesting(true)
     }
 }
-
-typealias KillConfirmationOverlay = QuitConfirmationOverlay

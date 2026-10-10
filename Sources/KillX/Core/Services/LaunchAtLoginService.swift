@@ -19,14 +19,10 @@ final class LaunchAtLoginService: ObservableObject {
             if status == .enabled || status == .requiresApproval {
                 self.isEnabled = true
             } else {
-                self.isEnabled = UserDefaults.standard.object(forKey: "killx_launch_at_login") != nil
-                    ? UserDefaults.standard.bool(forKey: "killx_launch_at_login")
-                    : UserDefaults.standard.bool(forKey: "quitx_launch_at_login")
+                self.isEnabled = UserDefaults.standard.bool(forKey: "killx_launch_at_login")
             }
         } else {
-            self.isEnabled = UserDefaults.standard.object(forKey: "killx_launch_at_login") != nil
-                ? UserDefaults.standard.bool(forKey: "killx_launch_at_login")
-                : UserDefaults.standard.bool(forKey: "quitx_launch_at_login")
+            self.isEnabled = UserDefaults.standard.bool(forKey: "killx_launch_at_login")
         }
     }
 

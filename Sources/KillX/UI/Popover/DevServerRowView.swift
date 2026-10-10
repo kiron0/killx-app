@@ -11,7 +11,7 @@ struct DevServerRowView: View {
 
     @StateObject private var state = DevServerRowUIState()
 
-    private let goldColor = QuitXTheme.accent
+    private let accentColor = KillXTheme.accent
 
     private var isSelected: Bool {
         vm.selectedPorts.contains(server.port.id)
@@ -20,7 +20,7 @@ struct DevServerRowView: View {
     var body: some View {
         HStack(spacing: 6) {
 
-            QuitXSelectionCheckbox(isSelected: isSelected)
+            KillXSelectionCheckbox(isSelected: isSelected)
 
             AppIconView(bundleId: server.port.appBundleId, pid: server.port.pid, size: 18, cornerRadius: 3.5)
 
@@ -30,9 +30,9 @@ struct DevServerRowView: View {
                 .padding(.vertical, 2)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(goldColor.opacity(0.18))
+                        .fill(accentColor.opacity(0.18))
                 )
-                .foregroundStyle(goldColor)
+                .foregroundStyle(accentColor)
                 .layoutPriority(1)
 
             VStack(alignment: .leading, spacing: 1) {
@@ -84,8 +84,8 @@ struct DevServerRowView: View {
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
-                .background(vm.isOptionKeyPressed ? Color.red.opacity(0.18) : goldColor.opacity(0.18))
-                .foregroundStyle(vm.isOptionKeyPressed ? Color.red : goldColor)
+                .background(vm.isOptionKeyPressed ? Color.red.opacity(0.18) : accentColor.opacity(0.18))
+                .foregroundStyle(vm.isOptionKeyPressed ? Color.red : accentColor)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
             }
             .buttonStyle(.plain)

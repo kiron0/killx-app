@@ -1,13 +1,13 @@
 import SwiftUI
 
-struct QuitXSelectionCheckbox: View {
+struct KillXSelectionCheckbox: View {
     let isSelected: Bool
     var isPartial = false
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 3)
-                .fill(isSelected || isPartial ? QuitXTheme.accent : Color.primary.opacity(0.08))
+                .fill(isSelected || isPartial ? KillXTheme.accent : Color.primary.opacity(0.08))
                 .frame(width: 14, height: 14)
 
             if isSelected {
@@ -24,5 +24,3 @@ struct QuitXSelectionCheckbox: View {
         .contentShape(Rectangle())
     }
 }
-
-typealias KillXSelectionCheckbox = QuitXSelectionCheckbox

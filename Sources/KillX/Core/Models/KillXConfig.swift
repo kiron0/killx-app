@@ -61,5 +61,3 @@ struct KillXConfig: Codable, Equatable {
         )
     }
 }
-
-typealias QuitXConfig = KillXConfig

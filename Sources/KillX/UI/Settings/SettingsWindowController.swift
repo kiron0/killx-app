@@ -48,7 +48,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
             if win.styleMask.contains(.fullSizeContentView) {
                 win.styleMask.remove(.fullSizeContentView)
             }
-            win.backgroundColor = QuitXTheme.toolbarBackgroundNSColor
+            win.backgroundColor = KillXTheme.toolbarBackgroundNSColor
             win.isOpaque = true
             tabModel.glassTopInset = 0
         }
@@ -98,7 +98,7 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         } else {
             win.styleMask.remove(.fullSizeContentView)
             win.isOpaque = true
-            win.backgroundColor = QuitXTheme.toolbarBackgroundNSColor
+            win.backgroundColor = KillXTheme.toolbarBackgroundNSColor
             win.titlebarAppearsTransparent = true
         }
         appliedGlass = LiquidGlass.enabled

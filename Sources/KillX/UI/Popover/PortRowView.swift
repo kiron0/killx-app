@@ -28,7 +28,7 @@ struct PortRowView: View {
 
         HStack(spacing: 6) {
 
-            QuitXSelectionCheckbox(isSelected: isSelected)
+            KillXSelectionCheckbox(isSelected: isSelected)
 
             AppIconView(bundleId: port.appBundleId, pid: port.pid, size: 18, cornerRadius: 3.5)
 
@@ -77,7 +77,7 @@ struct PortRowView: View {
                     .layoutPriority(2)
             }
 
-            QuitXMenuButton(
+            KillXMenuButton(
                 assetName: "menu-options",
                 systemSymbolName: "ellipsis",
                 symbolPointSize: 12,
