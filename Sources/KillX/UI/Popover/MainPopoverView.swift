@@ -4,7 +4,6 @@ import AppKit
 private final class PopoverUIState: ObservableObject {
     @Published var isActionButtonHovered = false
     var cachedOptionsMenu: NSMenu? = nil
-    var cachedFilterMode: PortFilterMode? = nil
 }
 
 struct MainPopoverView: View {
@@ -29,13 +28,9 @@ struct MainPopoverView: View {
             Color.clear
                 .frame(height: 12)
 
-            filterSwitcher
-                .padding(.horizontal, 8)
-                .padding(.top, 5)
-                .padding(.bottom, 4)
-
             primaryActionButton
                 .padding(.horizontal, 8)
+                .padding(.top, 4)
                 .padding(.bottom, 4)
 
             searchBarRow
@@ -107,54 +102,6 @@ struct MainPopoverView: View {
         .onChange(of: vm.visibleCount) {
             StatusItemController.shared?.updatePopoverSize()
         }
-        .onChange(of: vm.filterMode) {
-            StatusItemController.shared?.updatePopoverSize()
-        }
-    }
-
-    // MARK: - Filter Switcher
-
-    private var filterSwitcher: some View {
-        HStack(spacing: 2) {
-            ForEach(PortFilterMode.allCases) { mode in
-                let isSelected = vm.filterMode == mode
-                let count: Int = {
-                    switch mode {
-                    case .all: return vm.ports.count
-                    case .dev: return vm.ports.filter(\.isDevServer).count
-                    }
-                }()
-
-                Button {
-                    vm.filterMode = mode
-                    StatusItemController.shared?.updatePopoverSize()
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(mode.rawValue)
-                            .font(.system(size: 11, weight: isSelected ? .bold : .medium))
-                        Text("\(count)")
-                            .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(isSelected ? Self.goldColor.opacity(0.3) : Color.primary.opacity(0.08))
-                            .clipShape(Capsule())
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 22)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(isSelected ? Color(NSColor.textBackgroundColor).opacity(0.85) : Color.clear)
-                    )
-                    .foregroundStyle(isSelected ? Color.primary : Color.secondary)
-                }
-                .buttonStyle(.plain)
-            }
-        }
-        .padding(2)
-        .background(
-            RoundedRectangle(cornerRadius: 7)
-                .fill(Color.primary.opacity(0.06))
-        )
     }
 
     // MARK: - Primary Action Button
@@ -169,18 +116,9 @@ struct MainPopoverView: View {
                 return (text, true, {
                     vm.confirmAndKillSelectedPorts(force: isForced, tree: configStore.config.treeKillByDefault)
                 })
-            } else if vm.filterMode == .dev {
-                let devCount = vm.ports.filter(\.isDevServer).count
-                let text = isForced ? "Force Sweep Dev Servers (\(devCount))" : "Sweep Dev Servers (\(devCount))"
-                return (text, devCount > 0, {
-                    vm.confirmAndSweepDevServers(force: isForced)
-                })
             } else {
-                let devCount = vm.ports.filter(\.isDevServer).count
-                let text = devCount > 0 ? (isForced ? "Force Kill Dev Ports (\(devCount))" : "Kill Dev Ports (\(devCount))") : "Kill Selected Ports"
-                return (text, devCount > 0, {
-                    vm.confirmAndSweepDevServers(force: isForced)
-                })
+                let text = isForced ? "Force Kill Selected Ports" : "Kill Selected Ports"
+                return (text, false, {})
             }
         }()
 
@@ -424,13 +362,11 @@ struct MainPopoverView: View {
     }
 
     private func optionsMenu() -> NSMenu {
-        if let menu = uiState.cachedOptionsMenu,
-           uiState.cachedFilterMode == vm.filterMode {
+        if let menu = uiState.cachedOptionsMenu {
             return menu
         }
         let menu = buildOptionsMenu()
         uiState.cachedOptionsMenu = menu
-        uiState.cachedFilterMode = vm.filterMode
         return menu
     }
 }

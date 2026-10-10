@@ -52,13 +52,7 @@ struct PortRowView: View {
                     .foregroundStyle(Color.primary)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .help(port.command.isEmpty ? port.displayAppName : "\(port.displayAppName)\n\(port.command)")
-
-                Text(verbatim: "(\(port.pid))")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(Color.secondary)
-                    .lineLimit(1)
-                    .layoutPriority(1)
+                    .help(port.command.isEmpty ? "\(port.displayAppName) (PID \(port.pid))" : "\(port.displayAppName) (PID \(port.pid))\n\(port.command)")
 
                 if let docker = port.docker {
                     Text("docker")

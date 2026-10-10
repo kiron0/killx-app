@@ -150,7 +150,7 @@ struct PortDetailsView: View {
     }
 
     private var header: some View {
-        Text("Port :\(port.port) Details")
+        Text(verbatim: "Port :\(port.port) Details")
             .font(.system(size: 13, weight: .semibold))
             .foregroundStyle(Color.primary)
             .frame(maxWidth: .infinity)

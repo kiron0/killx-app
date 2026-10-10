@@ -14,6 +14,8 @@ struct ProcessTraceWindowView: View {
 
             // Header info
             HStack(spacing: 12) {
+                AppIconView(bundleId: port.appBundleId, pid: port.pid, size: 34, cornerRadius: 7.5)
+
                 Text(verbatim: ":\(port.port)")
                     .font(.system(size: 16, weight: .bold, design: .monospaced))
                     .padding(.horizontal, 8)
@@ -25,10 +27,10 @@ struct ProcessTraceWindowView: View {
                     .foregroundStyle(port.isDevServer ? accentColor : Color.primary)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(port.processName)
+                    Text(port.displayAppName)
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(Color.primary)
-                    Text(verbatim: "PID \(port.pid) • Process Ancestry Tree")
+                    Text(verbatim: "\(port.processName) • PID \(port.pid) • Process Ancestry Tree")
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(Color.secondary)
                 }
@@ -77,6 +79,9 @@ struct ProcessTraceWindowView: View {
                                     .font(.system(size: 11, design: .monospaced))
                                     .foregroundStyle(node.isListener ? accentColor : Color.secondary.opacity(0.7))
                                     .padding(.leading, CGFloat(max(0, index - 1)) * 14)
+                                    .padding(.top, 2)
+
+                                AppIconView(bundleId: nil, pid: node.pid, size: 18, cornerRadius: 3.5)
 
                                 VStack(alignment: .leading, spacing: 3) {
                                     HStack(spacing: 6) {
@@ -154,7 +159,7 @@ struct ProcessTraceWindowView: View {
     }
 
     private var header: some View {
-        Text("Process Tree — Port :\(port.port)")
+        Text(verbatim: "Process Tree — Port :\(port.port)")
             .font(.system(size: 13, weight: .semibold))
             .foregroundStyle(Color.primary)
             .frame(maxWidth: .infinity)

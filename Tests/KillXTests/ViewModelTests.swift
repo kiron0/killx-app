@@ -22,27 +22,16 @@ struct AppListViewModelTests {
         #expect(!vm.currentQuote.isEmpty)
     }
 
-    @Test("Filtered ports with filterMode all")
-    func testFilteredPortsModeAll() {
+    @Test("Filtered ports returns all ports when query empty")
+    func testFilteredPortsAll() {
         vm.ports = [port1, port2, port3]
-        vm.filterMode = .all
         vm.searchQuery = ""
         #expect(vm.filteredPorts.count == 3)
-    }
-
-    @Test("Filtered ports with filterMode dev")
-    func testFilteredPortsModeDev() {
-        vm.ports = [port1, port2, port3]
-        vm.filterMode = .dev
-        vm.searchQuery = ""
-        #expect(vm.filteredPorts.count == 2)
-        #expect(vm.filteredPorts.allSatisfy { $0.isDevServer })
     }
 
     @Test("Filtered ports with search query by port number")
     func testFilteredPortsSearchPort() {
         vm.ports = [port1, port2, port3]
-        vm.filterMode = .all
         vm.searchQuery = "5432"
         #expect(vm.filteredPorts.count == 1)
         #expect(vm.filteredPorts.first?.port == 5432)
@@ -51,7 +40,6 @@ struct AppListViewModelTests {
     @Test("Filtered ports with case-insensitive search by process name")
     func testFilteredPortsSearchName() {
         vm.ports = [port1, port2, port3]
-        vm.filterMode = .all
         vm.searchQuery = "NODE"
         #expect(vm.filteredPorts.count == 1)
         #expect(vm.filteredPorts.first?.processName == "node")
@@ -81,7 +69,6 @@ struct AppListViewModelTests {
     @Test("isAllSelected true when all visible ports selected")
     func testIsAllSelectedTrue() {
         vm.ports = [port1, port2]
-        vm.filterMode = .all
         vm.searchQuery = ""
         vm.selectedPorts = [port1.id, port2.id]
         #expect(vm.isAllSelected)
@@ -90,7 +77,6 @@ struct AppListViewModelTests {
     @Test("isAllSelected false when some ports unselected")
     func testIsAllSelectedPartial() {
         vm.ports = [port1, port2]
-        vm.filterMode = .all
         vm.searchQuery = ""
         vm.selectedPorts = [port1.id]
         #expect(!vm.isAllSelected)
@@ -100,7 +86,6 @@ struct AppListViewModelTests {
     @Test("toggleSelectAll toggles between all and none")
     func testToggleSelectAll() {
         vm.ports = [port1, port2]
-        vm.filterMode = .all
         vm.searchQuery = ""
         vm.selectedPorts = []
 

@@ -130,7 +130,7 @@ final class StatusItemController: NSObject {
         if count == 0 {
             calculated = 175
         } else {
-            let baseHeight: CGFloat = 122
+            let baseHeight: CGFloat = 95
             let rowHeight: CGFloat = 27
             calculated = baseHeight + (CGFloat(count) * rowHeight)
         }

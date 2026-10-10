@@ -1,12 +1,6 @@
 import SwiftUI
 import AppKit
 
-public enum PortFilterMode: String, CaseIterable, Identifiable {
-    case all = "All Ports"
-    case dev = "Dev Servers"
-    public var id: String { rawValue }
-}
-
 struct KillConfirmationRequest: Identifiable {
     var id: String { "\(title)-\(message)" }
     let title: String
@@ -20,7 +14,6 @@ struct KillConfirmationRequest: Identifiable {
 final class AppListViewModel: ObservableObject {
     static let shared = AppListViewModel()
 
-    @Published var filterMode: PortFilterMode = .all
     @Published var ports: [PortInfo] = []
     @Published var selectedPorts: Set<String> = []
     @Published var devServers: [DevServerInfo] = []
@@ -97,9 +90,6 @@ final class AppListViewModel: ObservableObject {
         let excluded = Set(configStore.config.excludePorts)
         list = list.filter { !excluded.contains($0.port) }
 
-        if filterMode == .dev {
-            list = list.filter(\.isDevServer)
-        }
         let q = searchQuery.trimmingCharacters(in: .whitespaces).lowercased()
         guard !q.isEmpty else { return list }
         return list.filter {

@@ -79,6 +79,11 @@ struct PortInfoTests {
         #expect(port.docker?.name == "web-db")
         #expect(port.docker?.publishedPort == 5432)
         #expect(!port.isDevServer)
+        #expect(port.portString == "5432")
+
+        let highPort = PortInfo(port: 54564, pid: 999, processName: "node")
+        #expect(highPort.portString == "54564")
+        #expect(!highPort.portString.contains(","))
     }
 
     @Test("PortInfo app display and identity")
