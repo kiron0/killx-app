@@ -11,12 +11,12 @@ struct PortListView: View {
             }
         } else {
             rows
-                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
     }
 
     private var rows: some View {
-        VStack(spacing: 2) {
+        LazyVStack(spacing: 2) {
             ForEach(vm.filteredPorts) { port in
                 PortRowView(port: port, vm: vm)
             }

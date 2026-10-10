@@ -139,8 +139,6 @@ final class SettingsWindowController: NSObject, NSWindowDelegate, NSToolbarDeleg
         win.setFrame(newFrame, display: true, animate: true)
     }
 
-    // MARK: - NSToolbarDelegate
-
     nonisolated func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         SettingsTab.allCases.map { $0.toolbarItemIdentifier }
     }

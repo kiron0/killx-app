@@ -11,6 +11,7 @@ struct KillXConfig: Codable, Equatable {
     var disableTips: Bool
     var sortBy: SortBy
     var dockerStopTimeout: Int
+    var liquidGlassEnabled: Bool = true
 
     // Backward compatibility properties
     var disableQuitTips: Bool {
@@ -56,7 +57,8 @@ struct KillXConfig: Codable, Equatable {
             playSounds: true,
             disableTips: false,
             sortBy: .portAsc,
-            dockerStopTimeout: 5
+            dockerStopTimeout: 5,
+            liquidGlassEnabled: true
         )
     }
 }

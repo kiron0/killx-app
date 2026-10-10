@@ -39,6 +39,10 @@ final class AppListViewModel: ObservableObject {
     @Published var isTracingTree: Bool = false
     @Published var pendingKillConfirmation: KillConfirmationRequest? = nil
     @Published var arrowX: CGFloat = 135
+    var popoverArrowX: CGFloat? {
+        get { arrowX }
+        set { arrowX = newValue ?? 135 }
+    }
     @Published var toastMessage: String = ""
     @Published var toastIsError: Bool = false
     @Published var pendingPortIds: Set<String> = []

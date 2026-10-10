@@ -1,11 +1,17 @@
 import SwiftUI
 import AppKit
 
+private final class DevServerRowUIState: ObservableObject {
+    @Published var isHovered = false
+}
+
 struct DevServerRowView: View {
     let server: DevServerInfo
     @ObservedObject var vm: AppListViewModel
 
-    private let accentColor = KillXTheme.accent
+    @StateObject private var state = DevServerRowUIState()
+
+    private let goldColor = QuitXTheme.accent
 
     private var isSelected: Bool {
         vm.selectedPorts.contains(server.port.id)
@@ -13,19 +19,8 @@ struct DevServerRowView: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            // Checkbox (QuitX replica)
-            ZStack {
-                RoundedRectangle(cornerRadius: 2.5)
-                    .fill(isSelected ? accentColor : Color.primary.opacity(0.08))
-                    .frame(width: 14, height: 14)
-
-                if isSelected {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 8, weight: .bold))
-                        .foregroundStyle(.black.opacity(0.9))
-                }
-            }
-            .contentShape(Rectangle())
+            // Checkbox matching QuitX
+            QuitXSelectionCheckbox(isSelected: isSelected)
 
             // Port badge
             Text(verbatim: ":\(server.port.port)")
@@ -34,9 +29,9 @@ struct DevServerRowView: View {
                 .padding(.vertical, 2)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(accentColor.opacity(0.18))
+                        .fill(goldColor.opacity(0.18))
                 )
-                .foregroundStyle(accentColor)
+                .foregroundStyle(goldColor)
 
             // Details
             VStack(alignment: .leading, spacing: 1) {
@@ -60,7 +55,7 @@ struct DevServerRowView: View {
 
             Spacer(minLength: 4)
 
-            // Trace button (standalone dialog)
+            // Trace button
             Button {
                 ProcessTraceWindowController.shared.show(port: server.port)
             } label: {
@@ -73,7 +68,7 @@ struct DevServerRowView: View {
             .buttonStyle(.plain)
             .help("Trace dev server process ancestry")
 
-            // Tree kill button (QuitX replica style)
+            // Tree kill button
             Button {
                 vm.confirmAndKillDevServer(server, force: vm.isOptionKeyPressed)
             } label: {
@@ -85,8 +80,8 @@ struct DevServerRowView: View {
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
-                .background(vm.isOptionKeyPressed ? Color.red.opacity(0.18) : Color.orange.opacity(0.18))
-                .foregroundStyle(vm.isOptionKeyPressed ? Color.red : Color.orange)
+                .background(vm.isOptionKeyPressed ? Color.red.opacity(0.18) : goldColor.opacity(0.18))
+                .foregroundStyle(vm.isOptionKeyPressed ? Color.red : goldColor)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
             }
             .buttonStyle(.plain)
@@ -98,5 +93,10 @@ struct DevServerRowView: View {
         .onTapGesture {
             vm.toggleSelection(for: server.port)
         }
+        .background(
+            RoundedRectangle(cornerRadius: 3.5)
+                .fill(state.isHovered ? Color.primary.opacity(0.07) : Color.clear)
+        )
+        .onHover { h in state.isHovered = h }
     }
 }

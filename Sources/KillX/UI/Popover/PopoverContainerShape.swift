@@ -4,7 +4,8 @@ struct PopoverContainerShape: Shape {
     var arrowX: CGFloat = 135
     var arrowWidth: CGFloat = 32
     var arrowHeight: CGFloat = 12
-    var cornerRadius: CGFloat = 10
+    var centeredArrow: Bool = false
+    var cornerRadius: CGFloat = 14
 
     func path(in rect: CGRect) -> Path {
         var path = Path()
@@ -13,7 +14,8 @@ struct PopoverContainerShape: Shape {
         let left = rect.minX
         let right = rect.maxX
         let halfW = arrowWidth / 2
-        let clampedArrowX = max(left + cornerRadius + halfW, min(arrowX, right - cornerRadius - halfW))
+        let targetArrowX = centeredArrow ? (left + right) / 2 : arrowX
+        let clampedArrowX = max(left + cornerRadius + halfW, min(targetArrowX, right - cornerRadius - halfW))
 
         path.move(to: CGPoint(x: left + cornerRadius, y: top))
         path.addLine(to: CGPoint(x: clampedArrowX - halfW, y: top))

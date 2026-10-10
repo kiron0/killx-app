@@ -267,17 +267,7 @@ struct GeneralTabCloneView: View {
             isOn.wrappedValue.toggle()
         } label: {
             HStack(spacing: 8) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 3.5)
-                        .fill(isOn.wrappedValue ? accent : Color.primary.opacity(0.08))
-                        .frame(width: 14, height: 14)
-
-                    if isOn.wrappedValue {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 8, weight: .heavy))
-                            .foregroundStyle(Color.black.opacity(0.9))
-                    }
-                }
+                QuitXSelectionCheckbox(isSelected: isOn.wrappedValue)
 
                 Text(title)
                     .font(.system(size: 12, weight: .regular))
@@ -450,17 +440,7 @@ struct ShortcutsTabCloneView: View {
             Button {
                 isEnabled.wrappedValue.toggle()
             } label: {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 3.5)
-                        .fill(active ? accent : Color.primary.opacity(0.08))
-                        .frame(width: 15, height: 15)
-
-                    if active {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 8.5, weight: .heavy))
-                            .foregroundStyle(Color.black.opacity(0.9))
-                    }
-                }
+                QuitXSelectionCheckbox(isSelected: active)
             }
             .buttonStyle(.plain)
 
@@ -577,20 +557,6 @@ struct AboutTabCloneView: View {
                     .foregroundStyle(Color.secondary)
 
                 HStack(spacing: 10) {
-                    Button("GitHub") {
-                        if let url = URL(string: "https://github.com/kiron0/killx") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
-                    .font(.system(size: 11.5))
-
-                    Button("Documentation") {
-                        if let url = URL(string: "https://killx.js.org") {
-                            NSWorkspace.shared.open(url)
-                        }
-                    }
-                    .font(.system(size: 11.5))
-
                     Button(updateChecker.isChecking ? "Checking..." : "Check Updates") {
                         Task {
                             await updateChecker.checkForUpdates(isUserInitiated: true)

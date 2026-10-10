@@ -1,38 +1,13 @@
 import AppKit
 import SwiftUI
 
-final class MenuPopupWindow: NSPanel {
-    init(contentRect: NSRect) {
-        super.init(
-            contentRect: contentRect,
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
-        self.isOpaque = false
-        self.backgroundColor = .clear
-        self.hasShadow = true
-        self.level = .popUpMenu
-        self.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-        self.isMovable = false
-        self.isMovableByWindowBackground = false
-    }
-
-    override var canBecomeKey: Bool {
-        return true
-    }
-
-    override var canBecomeMain: Bool {
-        return false
-    }
-}
-
 @MainActor
 final class StatusItemController: NSObject {
     static weak var shared: StatusItemController?
+    static let popoverWidth: CGFloat = 270
 
     private var statusItem: NSStatusItem
-    private var window: MenuPopupWindow?
+    private var window: ArrowPopoverWindow?
     private var hostingController: NSHostingController<AnyView>?
     private var globalEventMonitor: Any?
     private var localEventMonitor: Any?
@@ -55,13 +30,10 @@ final class StatusItemController: NSObject {
     }
 
     deinit {
-        if let monitor = globalEventMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
-        if let monitor = localEventMonitor {
-            NSEvent.removeMonitor(monitor)
-        }
         refreshTask?.cancel()
+        liveMonitoringTask?.cancel()
+        if let g = globalEventMonitor { NSEvent.removeMonitor(g) }
+        if let l = localEventMonitor { NSEvent.removeMonitor(l) }
     }
 
     private func configureButton() {
@@ -77,7 +49,12 @@ final class StatusItemController: NSObject {
         button.target = self
     }
 
+    private var cachedMenuBarIcon: NSImage?
+
     private func makeMenuBarIcon() -> NSImage {
+        if let cached = cachedMenuBarIcon {
+            return cached
+        }
         let targetSize = NSSize(width: 18, height: 18)
         let icon = NSImage(size: targetSize)
         let iconNames = ["status-icon", "menubar"]
@@ -108,6 +85,7 @@ final class StatusItemController: NSObject {
 
         if loaded {
             icon.isTemplate = true
+            cachedMenuBarIcon = icon
             return icon
         }
 
@@ -118,6 +96,7 @@ final class StatusItemController: NSObject {
         rounded.fill()
         image.unlockFocus()
         image.isTemplate = true
+        cachedMenuBarIcon = image
         return image
     }
 
@@ -128,14 +107,12 @@ final class StatusItemController: NSObject {
                 .environmentObject(ConfigStore.shared)
         )
         let hosting = NSHostingController(rootView: rootView)
+        hosting.sizingOptions = []
         hosting.view.wantsLayer = true
-        hosting.view.layer?.cornerRadius = 10
-        hosting.view.layer?.masksToBounds = true
         self.hostingController = hosting
 
-        let win = MenuPopupWindow(contentRect: NSRect(x: 0, y: 0, width: 280, height: 200))
+        let win = ArrowPopoverWindow(level: .popUpMenu)
         win.contentViewController = hosting
-        win.appearance = NSApp.effectiveAppearance
         self.window = win
 
         updatePopoverSize()
@@ -149,53 +126,61 @@ final class StatusItemController: NSObject {
     @MainActor
     func updatePopoverSize() {
         let count = AppListViewModel.shared.visibleCount
-
-        var calculated: CGFloat
+        let calculated: CGFloat
         if count == 0 {
-            calculated = 190
+            calculated = 175
         } else {
-            let baseHeight: CGFloat = 126
-            let rowHeight: CGFloat = 28
+            let baseHeight: CGFloat = 122
+            let rowHeight: CGFloat = 27
             calculated = baseHeight + (CGFloat(count) * rowHeight)
         }
-        if AppListViewModel.shared.pendingKillConfirmation != nil {
-            calculated = max(calculated, 240)
-        }
 
+        let minPopoverHeight: CGFloat = 220
+        let effectiveCalculated = max(calculated, minPopoverHeight)
         let arrowHeight: CGFloat = 12
         let screen = statusItem.button?.window?.screen ?? NSScreen.main
         let screenHeight = screen?.visibleFrame.height ?? 800
-        // Cap maximum height to 420px (QuitX replica pattern) so it never overflows display
-        let maximumHeight = min(420, max(180, screenHeight - 60))
-        let targetHeight = min(maximumHeight, calculated)
-        AppListViewModel.shared.listNeedsScrolling = calculated > maximumHeight
+        let maximumHeight = max(100, screenHeight - 48)
+        let targetHeight = min(maximumHeight, effectiveCalculated)
+        let needsScrolling = calculated > maximumHeight
+        if AppListViewModel.shared.listNeedsScrolling != needsScrolling {
+            AppListViewModel.shared.listNeedsScrolling = needsScrolling
+        }
 
         let totalHeight = targetHeight + arrowHeight
-        let newSize = NSSize(width: 280, height: totalHeight)
+        let newSize = NSSize(width: Self.popoverWidth, height: totalHeight)
         guard let win = window else { return }
 
         var frame = win.frame
-        let oldHeight = frame.height
         frame.size = newSize
-        frame.origin.y += (oldHeight - totalHeight)
+
+        var originX = frame.origin.x
+        var originY = frame.origin.y
+        var arrowX: CGFloat = 135
 
         if let button = statusItem.button, let btnWindow = button.window {
             let buttonScreenRect = btnWindow.convertToScreen(button.bounds)
-            var originX = buttonScreenRect.midX - (newSize.width / 2)
+            originX = buttonScreenRect.midX - (newSize.width / 2)
+            originY = buttonScreenRect.minY - totalHeight - 2
 
             if let scr = screen {
                 let screenMinX = scr.visibleFrame.minX
                 let screenMaxX = scr.visibleFrame.maxX
                 originX = max(screenMinX + 4, min(originX, screenMaxX - newSize.width - 4))
             }
-            let originY = buttonScreenRect.minY - totalHeight - 2
-            frame.origin = NSPoint(x: originX, y: originY)
-
-            let arrowX = max(18, min(buttonScreenRect.midX - originX, newSize.width - 18))
-            AppListViewModel.shared.arrowX = arrowX
+            arrowX = buttonScreenRect.midX - originX
+        } else if let scr = screen ?? NSScreen.main {
+            originX = scr.visibleFrame.midX - (newSize.width / 2)
+            originY = scr.visibleFrame.maxY - totalHeight - 2
         }
 
-        win.setFrame(frame, display: true, animate: false)
+        frame.origin = NSPoint(x: originX, y: originY)
+        frame = frame.integral
+        if AppListViewModel.shared.arrowX != arrowX {
+            AppListViewModel.shared.arrowX = arrowX
+        }
+        guard frame != win.frame else { return }
+        win.setFrame(frame, display: win.isVisible, animate: false)
         win.invalidateShadow()
     }
 
@@ -213,8 +198,12 @@ final class StatusItemController: NSObject {
     }
 
     func closePopover() {
-        lastCloseTimestamp = Date()
+        AppListViewModel.shared.pendingKillConfirmation = nil
+        if isShown {
+            lastCloseTimestamp = Date()
+        }
         stopLiveMonitoring()
+        removeOutsideClickMonitor()
         window?.orderOut(nil)
     }
 
@@ -234,13 +223,26 @@ final class StatusItemController: NSObject {
                 return
             }
             guard let win = window else { return }
-            win.appearance = NSApp.effectiveAppearance
-            NSApp.activate(ignoringOtherApps: true)
             updatePopoverSize()
+            win.contentView?.layoutSubtreeIfNeeded()
+            if !NSApp.isActive {
+                NSApp.activate(ignoringOtherApps: true)
+            }
             win.makeKeyAndOrderFront(nil)
             win.makeFirstResponder(nil)
+            win.invalidateShadow()
             refreshVisibleApps()
+            installOutsideClickMonitor()
             startLiveMonitoring()
+        }
+    }
+
+    private func refreshVisibleApps() {
+        refreshTask?.cancel()
+        refreshTask = Task { @MainActor [weak self] in
+            await AppListViewModel.shared.refresh()
+            guard !Task.isCancelled, let self else { return }
+            self.updatePopoverSize()
         }
     }
 
@@ -261,111 +263,160 @@ final class StatusItemController: NSObject {
         liveMonitoringTask = nil
     }
 
-    private func refreshVisibleApps() {
-        refreshTask?.cancel()
-        refreshTask = Task { @MainActor [weak self] in
-            await AppListViewModel.shared.refresh()
-            guard !Task.isCancelled else { return }
-            self?.updatePopoverSize()
-        }
-    }
-
     private func showContextMenu() {
         closePopover()
         let menu = NSMenu()
-        menu.appearance = NSApp.effectiveAppearance
+        menu.autoenablesItems = false
 
         menu.addItem(MenuHelper.makeItem(
-            title: "Settings...",
-            action: #selector(openSettings),
-            target: self,
+            title: "Settings",
             keyEquivalent: ",",
             assetName: "settings-preferences",
-            systemSymbolName: "gearshape"
+            systemSymbolName: "gearshape",
+            action: {
+                SettingsWindowController.shared.show()
+            }
         ))
 
         menu.addItem(MenuHelper.makeItem(
             title: "Welcome Guide",
-            action: #selector(openWelcomeGuide),
-            target: self,
-            systemSymbolName: "hand.wave"
+            systemSymbolName: "hand.wave",
+            action: {
+                WelcomeWindowController.shared.show()
+            }
         ))
 
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(MenuHelper.makeItem(
             title: "Sweep Dev Servers",
-            action: #selector(sweepDevServers),
-            target: self,
             keyEquivalent: "d",
-            systemSymbolName: "arrow.triangle.branch"
+            systemSymbolName: "arrow.triangle.branch",
+            action: {
+                self.showPopover()
+                AppListViewModel.shared.confirmAndSweepDevServers()
+            }
         ))
 
         menu.addItem(MenuHelper.makeItem(
             title: "Refresh Ports",
-            action: #selector(refreshPorts),
-            target: self,
             keyEquivalent: "r",
-            systemSymbolName: "arrow.clockwise"
+            systemSymbolName: "arrow.clockwise",
+            action: {
+                Task {
+                    await AppListViewModel.shared.refresh()
+                }
+            }
         ))
 
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(MenuHelper.makeItem(
+            title: "Help & Docs",
+            keyEquivalent: "h",
+            assetName: "settings-help",
+            systemSymbolName: "questionmark.circle",
+            action: {
+                if let url = URL(string: "https://killx.js.org") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+        ))
+
+        menu.addItem(MenuHelper.makeItem(
             title: "About KillX",
-            action: #selector(openSettings),
-            target: self,
             keyEquivalent: "i",
             assetName: "preferences-about",
-            systemSymbolName: "info.circle"
+            systemSymbolName: "info.circle",
+            action: {
+                SettingsWindowController.shared.show(tab: .about)
+            }
         ))
 
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(MenuHelper.makeItem(
             title: "Quit",
-            action: #selector(quitApp),
-            target: self,
             keyEquivalent: "q",
             assetName: "settings-quit",
-            systemSymbolName: "power"
+            systemSymbolName: "power",
+            action: {
+                NSApplication.shared.terminate(nil)
+            }
         ))
 
         if let button = statusItem.button {
-            menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height + 4), in: button)
+            menu.popUp(positioning: nil, at: NSPoint(x: 0, y: button.bounds.height), in: button)
         }
-    }
-
-    @objc private func openSettings() {
-        SettingsWindowController.shared.show()
-    }
-
-    @objc private func openWelcomeGuide() {
-        WelcomeWindowController.shared.show()
-    }
-
-    @objc private func sweepDevServers() {
-        showPopover()
-        AppListViewModel.shared.confirmAndSweepDevServers()
-    }
-
-    @objc private func refreshPorts() {
-        Task {
-            await AppListViewModel.shared.refresh()
-        }
-    }
-
-    @objc private func quitApp() {
-        NSApplication.shared.terminate(nil)
     }
 
     private func startEventMonitor() {
-        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) { [weak self] _ in
-            guard let self = self, self.isShown else { return }
+        localEventMonitor = NSEvent.addLocalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown, .keyDown]
+        ) { [weak self] event in
+            guard let self, self.isShown else { return event }
 
-            if AppListViewModel.shared.pendingKillConfirmation != nil {
-                return
+            if event.type == .keyDown {
+                if event.keyCode == 53 {
+                    if AppListViewModel.shared.pendingKillConfirmation != nil {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            AppListViewModel.shared.pendingKillConfirmation = nil
+                        }
+                        return nil
+                    }
+                    self.closePopover()
+                    return nil
+                }
+                if event.keyCode == 36 {
+                    if let req = AppListViewModel.shared.pendingKillConfirmation {
+                        let action = req.action
+                        AppListViewModel.shared.pendingKillConfirmation = nil
+                        Task { await action() }
+                        return nil
+                    }
+                }
+
+                if event.modifierFlags.contains(.command) {
+                    let chars = event.charactersIgnoringModifiers?.lowercased() ?? ""
+                    if chars == "a" {
+                        let isEditingText = self.window?.firstResponder is NSText
+                        if !isEditingText {
+                            AppListViewModel.shared.toggleSelectAll()
+                            return nil
+                        }
+                    } else if chars == "," {
+                        self.closePopover()
+                        SettingsWindowController.shared.show()
+                        return nil
+                    } else if chars == "h" || chars == "?" {
+                        self.closePopover()
+                        if let url = URL(string: "https://killx.js.org") {
+                            NSWorkspace.shared.open(url)
+                        }
+                        return nil
+                    } else if chars == "i" {
+                        self.closePopover()
+                        SettingsWindowController.shared.show(tab: .about)
+                        return nil
+                    }
+                }
             }
+
+            let popupWindow = self.window
+            let statusWindow = self.statusItem.button?.window
+            if event.window !== popupWindow, event.window !== statusWindow {
+                self.closePopover()
+            }
+            return event
+        }
+    }
+
+    private func installOutsideClickMonitor() {
+        guard globalEventMonitor == nil else { return }
+        globalEventMonitor = NSEvent.addGlobalMonitorForEvents(
+            matching: [.leftMouseDown, .rightMouseDown]
+        ) { [weak self] _ in
+            guard let self, self.isShown else { return }
 
             if let button = self.statusItem.button, let buttonWindow = button.window {
                 let mouseLoc = NSEvent.mouseLocation
@@ -379,32 +430,12 @@ final class StatusItemController: NSObject {
                 self.closePopover()
             }
         }
+    }
 
-        localEventMonitor = NSEvent.addLocalMonitorForEvents(
-            matching: [.leftMouseDown, .rightMouseDown, .keyDown]
-        ) { [weak self] event in
-            guard let self, self.isShown else { return event }
-
-            if event.type == .keyDown, event.keyCode == 53 {
-                if AppListViewModel.shared.pendingKillConfirmation != nil {
-                    AppListViewModel.shared.pendingKillConfirmation = nil
-                    return nil
-                }
-                self.closePopover()
-                return nil
-            }
-
-            let popupWindow = self.window
-            let statusWindow = self.statusItem.button?.window
-            if let eventWin = event.window,
-               (eventWin === popupWindow || eventWin === statusWindow || eventWin.parent === popupWindow || eventWin.sheetParent === popupWindow) {
-                return event
-            }
-            if AppListViewModel.shared.pendingKillConfirmation != nil {
-                return event
-            }
-            self.closePopover()
-            return event
+    private func removeOutsideClickMonitor() {
+        if let monitor = globalEventMonitor {
+            NSEvent.removeMonitor(monitor)
+            globalEventMonitor = nil
         }
     }
 }

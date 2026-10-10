@@ -3,22 +3,23 @@ import AppKit
 
 private final class PopoverUIState: ObservableObject {
     @Published var isActionButtonHovered = false
+    var cachedOptionsMenu: NSMenu? = nil
+    var cachedFilterMode: PortFilterMode? = nil
 }
 
 struct MainPopoverView: View {
     @EnvironmentObject private var configStore: ConfigStore
     @ObservedObject private var vm = AppListViewModel.shared
     @StateObject private var uiState = PopoverUIState()
-    @FocusState private var isSearchFocused: Bool
 
-    private let accentColor = KillXTheme.accent
-    private let accentGradient = LinearGradient(
-        colors: [KillXTheme.accent, KillXTheme.accentLight],
+    private static let goldColor = QuitXTheme.accent
+    private static let goldGradient = LinearGradient(
+        colors: [QuitXTheme.accent, Color(red: 232/255, green: 155/255, blue: 0/255)],
         startPoint: .top,
         endPoint: .bottom
     )
-    private let forceGradient = LinearGradient(
-        colors: [Color(red: 240/255, green: 70/255, blue: 50/255), Color(red: 210/255, green: 40/255, blue: 30/255)],
+    private static let forceGradient = LinearGradient(
+        colors: [Color.red, Color(red: 210/255, green: 40/255, blue: 40/255)],
         startPoint: .top,
         endPoint: .bottom
     )
@@ -28,93 +29,86 @@ struct MainPopoverView: View {
             Color.clear
                 .frame(height: 12)
 
-            // Filter mode: All Ports | Dev Servers
             filterSwitcher
                 .padding(.horizontal, 8)
                 .padding(.top, 5)
                 .padding(.bottom, 4)
 
-            // Primary action button
             primaryActionButton
                 .padding(.horizontal, 8)
                 .padding(.bottom, 4)
 
-            // Search bar & select all toggle
             searchBarRow
                 .padding(.horizontal, 8)
                 .padding(.bottom, 4)
 
-            // Main Content Area
             if vm.isLoading && vm.ports.isEmpty {
                 VStack {
                     Spacer()
                     ProgressView()
-                        .controlSize(.small)
+                        .scaleEffect(0.8)
                     Spacer()
                 }
                 .frame(maxHeight: .infinity)
             } else if vm.filteredPorts.isEmpty {
                 emptyPortsView
+                    .frame(maxHeight: .infinity)
             } else {
                 PortListView(vm: vm)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
+
+            Spacer(minLength: 0)
 
             footerRow
                 .padding(.horizontal, 10)
-                .padding(.top, 4)
+                .padding(.top, 3)
                 .padding(.bottom, 6)
         }
-        .frame(width: 280)
+        .frame(width: 270)
+        .frame(minHeight: 220)
         .frame(maxHeight: .infinity)
-        .background(
-            KillXTheme.popoverBackground
-                .clipShape(PopoverContainerShape(arrowX: vm.arrowX, cornerRadius: 10))
-        )
-        .overlay(
-            PopoverContainerShape(arrowX: vm.arrowX, cornerRadius: 10)
-                .stroke(Color.primary.opacity(0.12), lineWidth: 0.5)
-        )
-        .clipShape(PopoverContainerShape(arrowX: vm.arrowX, cornerRadius: 10))
-        .onAppear {
-            isSearchFocused = false
+        .arrowPopoverChrome(arrowX: vm.arrowX, classicBackground: AnyView(QuitXTheme.popoverBackground))
+        .overlay(alignment: .bottom) {
+            if vm.showToast {
+                ToastView(
+                    message: vm.toastMessage,
+                    isError: vm.toastIsError
+                )
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .padding(.bottom, 36)
+            }
         }
+        .animation(.easeInOut(duration: 0.2), value: vm.showToast)
+        .overlay {
+            if let req = vm.pendingKillConfirmation {
+                QuitConfirmationOverlay(
+                    title: req.title,
+                    subtitle: req.message,
+                    confirmTitle: req.confirmButtonTitle,
+                    systemImage: req.isForced ? "bolt.trianglebadge.exclamationmark.fill" : "questionmark.circle.fill",
+                    isForced: req.isForced,
+                    onConfirm: {
+                        let action = req.action
+                        vm.pendingKillConfirmation = nil
+                        Task { await action() }
+                    },
+                    onCancel: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            vm.pendingKillConfirmation = nil
+                        }
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.18), value: vm.pendingKillConfirmation != nil)
+        .clipShape(popoverShape(arrowX: vm.arrowX))
         .onChange(of: vm.visibleCount) {
             StatusItemController.shared?.updatePopoverSize()
         }
         .onChange(of: vm.filterMode) {
             StatusItemController.shared?.updatePopoverSize()
-        }
-        .onChange(of: vm.pendingKillConfirmation != nil) {
-            StatusItemController.shared?.updatePopoverSize()
-        }
-        .overlay(alignment: .bottom) {
-            if vm.showToast {
-                ToastView(message: vm.toastMessage, isError: vm.toastIsError)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .padding(.bottom, 36)
-            }
-        }
-        .animation(.easeInOut(duration: 0.2), value: vm.showToast)
-        .alert(
-            vm.pendingKillConfirmation?.title ?? "Kill Process?",
-            isPresented: Binding(
-                get: { vm.pendingKillConfirmation != nil },
-                set: { if !$0 { vm.pendingKillConfirmation = nil } }
-            ),
-            presenting: vm.pendingKillConfirmation
-        ) { req in
-            Button(req.confirmButtonTitle, role: .destructive) {
-                let action = req.action
-                vm.pendingKillConfirmation = nil
-                Task {
-                    await action()
-                }
-            }
-            Button("Cancel", role: .cancel) {
-                vm.pendingKillConfirmation = nil
-            }
-        } message: { req in
-            Text(req.message)
         }
     }
 
@@ -142,7 +136,7 @@ struct MainPopoverView: View {
                             .font(.system(size: 9.5, weight: .semibold, design: .monospaced))
                             .padding(.horizontal, 4)
                             .padding(.vertical, 1)
-                            .background(isSelected ? accentColor.opacity(0.3) : Color.primary.opacity(0.08))
+                            .background(isSelected ? Self.goldColor.opacity(0.3) : Color.primary.opacity(0.08))
                             .clipShape(Capsule())
                     }
                     .frame(maxWidth: .infinity)
@@ -194,12 +188,22 @@ struct MainPopoverView: View {
             action()
         } label: {
             HStack(spacing: 5) {
-                if isForced {
+                if vm.isBatchKilling {
+                    ProgressView()
+                        .controlSize(.small)
+                        .tint(Color.black.opacity(0.88))
+                        .scaleEffect(0.65)
+                    Text("Killing…")
+                        .font(.system(size: 12, weight: .bold))
+                } else if isForced {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 10, weight: .bold))
+                    Text(title)
+                        .font(.system(size: 12, weight: .bold))
+                } else {
+                    Text(title)
+                        .font(.system(size: 12, weight: .bold))
                 }
-                Text(title)
-                    .font(.system(size: 12, weight: .bold))
             }
             .foregroundStyle(
                 isEnabled
@@ -210,18 +214,20 @@ struct MainPopoverView: View {
             .frame(height: 24)
             .background(
                 isEnabled
-                    ? (isForced ? forceGradient : accentGradient)
+                    ? (isForced ? Self.forceGradient : Self.goldGradient)
                     : LinearGradient(colors: [Color.primary.opacity(0.08), Color.primary.opacity(0.08)], startPoint: .top, endPoint: .bottom)
             )
             .clipShape(RoundedRectangle(cornerRadius: 6))
             .shadow(
-                color: isEnabled ? (isForced ? Color.red.opacity(0.3) : accentColor.opacity(uiState.isActionButtonHovered ? 0.3 : 0.12)) : Color.clear,
+                color: isEnabled
+                    ? (isForced ? Color.red.opacity(uiState.isActionButtonHovered ? 0.35 : 0.15) : Self.goldColor.opacity(uiState.isActionButtonHovered ? 0.3 : 0.12))
+                    : Color.clear,
                 radius: 2,
                 y: 1
             )
         }
         .buttonStyle(.plain)
-        .disabled(!isEnabled)
+        .disabled(!isEnabled || vm.isBatchKilling)
         .onHover { uiState.isActionButtonHovered = $0 }
     }
 
@@ -232,25 +238,13 @@ struct MainPopoverView: View {
             Button {
                 vm.toggleSelectAll()
             } label: {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(vm.isAllSelected || vm.isPartiallySelected ? accentColor : Color.primary.opacity(0.08))
-                        .frame(width: 14, height: 14)
-
-                    if vm.isAllSelected {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 8, weight: .bold))
-                            .foregroundStyle(.black.opacity(0.9))
-                    } else if vm.isPartiallySelected {
-                        RoundedRectangle(cornerRadius: 1)
-                            .fill(Color.black.opacity(0.9))
-                            .frame(width: 6, height: 2)
-                    }
-                }
-                .frame(width: 14, height: 14)
-                .contentShape(Rectangle())
+                QuitXSelectionCheckbox(
+                    isSelected: vm.isAllSelected,
+                    isPartial: vm.isPartiallySelected
+                )
             }
             .buttonStyle(.plain)
+            .contentShape(Rectangle())
             .help(vm.isAllSelected ? "Deselect All" : "Select All")
 
             HStack(spacing: 5) {
@@ -262,7 +256,7 @@ struct MainPopoverView: View {
                     .textFieldStyle(.plain)
                     .font(.system(size: 11.5))
                     .foregroundStyle(Color.primary)
-                    .focused($isSearchFocused)
+                    .disableInitialFocus()
 
                 if !vm.searchQuery.isEmpty {
                     Button {
@@ -294,10 +288,10 @@ struct MainPopoverView: View {
         VStack(spacing: 10) {
             Spacer()
             Image(systemName: "sparkles")
-                .font(.system(size: 28))
-                .foregroundStyle(accentColor)
+                .font(.system(size: 32))
+                .foregroundStyle(Self.goldColor)
             Text(vm.searchQuery.isEmpty ? "All clean! No active listening ports." : "No ports match '\(vm.searchQuery)'")
-                .font(.system(size: 12))
+                .font(.system(size: 12.5))
                 .foregroundStyle(Color.secondary)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 24)
@@ -312,150 +306,131 @@ struct MainPopoverView: View {
         HStack {
             if !configStore.config.disableTips {
                 Text(vm.currentQuote)
-                    .font(.system(size: 10.5, weight: .regular))
+                    .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(Color.secondary)
                     .lineLimit(1)
             }
 
             Spacer()
 
-            PopoverOptionsButton(
-                onSweepDev: { vm.confirmAndSweepDevServers() },
-                onRefresh: { Task { await vm.refresh() } }
+            QuitXMenuButton(
+                assetName: "settings",
+                selectedAssetName: "settings-selected",
+                systemSymbolName: "gearshape",
+                symbolPointSize: 13,
+                size: NSSize(width: 17, height: 17),
+                toolTip: "Options",
+                menu: {
+                    optionsMenu()
+                }
             )
             .frame(width: 22, height: 22)
         }
     }
-}
 
-// MARK: - Popover Options Menu Button
+    private func buildOptionsMenu() -> NSMenu {
+        let menu = NSMenu()
+        menu.autoenablesItems = false
 
-private struct PopoverOptionsButton: NSViewRepresentable {
-    var onSweepDev: () -> Void
-    var onRefresh: () -> Void
+        menu.addItem(MenuHelper.makeItem(
+            title: "Sweep Dev Servers",
+            keyEquivalent: "d",
+            systemSymbolName: "arrow.triangle.branch",
+            action: {
+                vm.confirmAndSweepDevServers()
+            }
+        ))
 
-    func makeCoordinator() -> Coordinator {
-        Coordinator(parent: self)
+        menu.addItem(MenuHelper.makeItem(
+            title: "Refresh Ports",
+            keyEquivalent: "r",
+            systemSymbolName: "arrow.clockwise",
+            action: {
+                Task { await vm.refresh() }
+            }
+        ))
+
+        menu.addItem(.separator())
+
+        menu.addItem(MenuHelper.makeItem(
+            title: "Settings",
+            keyEquivalent: ",",
+            assetName: "settings-preferences",
+            systemSymbolName: "gearshape",
+            action: {
+                StatusItemController.shared?.closePopover()
+                SettingsWindowController.shared.show()
+            }
+        ))
+
+        menu.addItem(MenuHelper.makeItem(
+            title: "Welcome Guide",
+            systemSymbolName: "hand.wave",
+            action: {
+                StatusItemController.shared?.closePopover()
+                WelcomeWindowController.shared.show()
+            }
+        ))
+
+        menu.addItem(MenuHelper.makeItem(
+            title: "Help & Docs",
+            keyEquivalent: "h",
+            assetName: "settings-help",
+            systemSymbolName: "questionmark.circle",
+            action: {
+                StatusItemController.shared?.closePopover()
+                if let url = URL(string: "https://killx.js.org") {
+                    NSWorkspace.shared.open(url)
+                }
+            }
+        ))
+
+        menu.addItem(MenuHelper.makeItem(
+            title: "Check for Updates",
+            keyEquivalent: "u",
+            systemSymbolName: "arrow.triangle.2.circlepath",
+            action: {
+                StatusItemController.shared?.closePopover()
+                Task {
+                    await UpdateChecker.shared.checkForUpdates(isUserInitiated: true)
+                }
+            }
+        ))
+
+        menu.addItem(MenuHelper.makeItem(
+            title: "About",
+            keyEquivalent: "i",
+            assetName: "preferences-about",
+            systemSymbolName: "info.circle",
+            action: {
+                StatusItemController.shared?.closePopover()
+                SettingsWindowController.shared.show(tab: .about)
+            }
+        ))
+
+        menu.addItem(.separator())
+
+        menu.addItem(MenuHelper.makeItem(
+            title: "Quit",
+            keyEquivalent: "q",
+            assetName: "settings-quit",
+            systemSymbolName: "power",
+            action: {
+                NSApplication.shared.terminate(nil)
+            }
+        ))
+
+        return menu
     }
 
-    func makeNSView(context: Context) -> NSButton {
-        let button = NSButton()
-        button.isBordered = false
-        if let img = AssetImages.load("settings") {
-            let copy = img.copy() as? NSImage ?? img
-            copy.size = NSSize(width: 17, height: 17)
-            copy.isTemplate = true
-            button.image = copy
-            button.imagePosition = .imageOnly
-        } else if let sym = NSImage(systemSymbolName: "gearshape", accessibilityDescription: "Options") {
-            let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .regular)
-            let copy = (sym.withSymbolConfiguration(config) ?? sym).copy() as? NSImage ?? sym
-            copy.size = NSSize(width: 17, height: 17)
-            copy.isTemplate = true
-            button.image = copy
-            button.imagePosition = .imageOnly
+    private func optionsMenu() -> NSMenu {
+        if let menu = uiState.cachedOptionsMenu,
+           uiState.cachedFilterMode == vm.filterMode {
+            return menu
         }
-        button.contentTintColor = NSColor.secondaryLabelColor
-        button.toolTip = "Options"
-        button.target = context.coordinator
-        button.action = #selector(Coordinator.showMenu(_:))
-        return button
-    }
-
-    func updateNSView(_ button: NSButton, context: Context) {
-        context.coordinator.parent = self
-    }
-
-    @MainActor
-    final class Coordinator: NSObject {
-        var parent: PopoverOptionsButton
-
-        init(parent: PopoverOptionsButton) {
-            self.parent = parent
-        }
-
-        @objc func showMenu(_ button: NSButton) {
-            let menu = NSMenu()
-            menu.appearance = NSApp.effectiveAppearance
-
-            menu.addItem(MenuHelper.makeItem(
-                title: "Sweep Dev Servers",
-                action: #selector(sweepDev),
-                target: self,
-                keyEquivalent: "d",
-                systemSymbolName: "arrow.triangle.branch"
-            ))
-
-            menu.addItem(MenuHelper.makeItem(
-                title: "Refresh Ports",
-                action: #selector(refresh),
-                target: self,
-                keyEquivalent: "r",
-                systemSymbolName: "arrow.clockwise"
-            ))
-
-            menu.addItem(.separator())
-
-            menu.addItem(MenuHelper.makeItem(
-                title: "Settings",
-                action: #selector(openSettings),
-                target: self,
-                keyEquivalent: ",",
-                assetName: "settings-preferences",
-                systemSymbolName: "gearshape"
-            ))
-
-            menu.addItem(MenuHelper.makeItem(
-                title: "Welcome Guide",
-                action: #selector(openWelcomeGuide),
-                target: self,
-                systemSymbolName: "hand.wave"
-            ))
-
-            menu.addItem(MenuHelper.makeItem(
-                title: "Help & Docs",
-                action: #selector(openHelp),
-                target: self,
-                keyEquivalent: "h",
-                assetName: "settings-help",
-                systemSymbolName: "questionmark.circle"
-            ))
-
-            menu.addItem(.separator())
-
-            menu.addItem(MenuHelper.makeItem(
-                title: "Quit",
-                action: #selector(quitApp),
-                target: self,
-                keyEquivalent: "q",
-                assetName: "settings-quit",
-                systemSymbolName: "power"
-            ))
-
-            menu.popUp(positioning: nil, at: NSPoint(x: button.bounds.maxX, y: button.bounds.minY), in: button)
-        }
-
-        @objc private func sweepDev() { parent.onSweepDev() }
-        @objc private func refresh() { parent.onRefresh() }
-
-        @objc private func openSettings() {
-            StatusItemController.shared?.closePopover()
-            SettingsWindowController.shared.show()
-        }
-
-        @objc private func openWelcomeGuide() {
-            StatusItemController.shared?.closePopover()
-            WelcomeWindowController.shared.show()
-        }
-
-        @objc private func openHelp() {
-            StatusItemController.shared?.closePopover()
-            guard let url = URL(string: "https://killx.js.org") else { return }
-            NSWorkspace.shared.open(url)
-        }
-
-        @objc private func quitApp() {
-            NSApplication.shared.terminate(nil)
-        }
+        let menu = buildOptionsMenu()
+        uiState.cachedOptionsMenu = menu
+        uiState.cachedFilterMode = vm.filterMode
+        return menu
     }
 }
