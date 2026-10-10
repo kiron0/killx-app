@@ -1,12 +1,21 @@
 import AppKit
 
 enum SoundService {
+    static var isAudioDisabledForTesting: Bool = {
+        ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || ProcessInfo.processInfo.processName.contains("Tests")
+            || ProcessInfo.processInfo.processName.contains("runner")
+            || NSClassFromString("XCTest") != nil
+    }()
+
     static func playQuitSingle() {
+        guard !isAudioDisabledForTesting else { return }
         guard ConfigStore.shared.config.playSounds else { return }
         playSound(named: "quit-single")
     }
 
     static func playQuitAll() {
+        guard !isAudioDisabledForTesting else { return }
         guard ConfigStore.shared.config.playSounds else { return }
         playSound(named: "quit-all")
     }

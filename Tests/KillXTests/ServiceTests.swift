@@ -109,6 +109,7 @@ struct DockerServiceTests {
 struct SoundServiceTests {
     @Test("Play sounds when sounds enabled or disabled does not crash")
     func testPlaySounds() {
+        SoundService.isAudioDisabledForTesting = true
         ConfigStore.shared.config.playSounds = true
         SoundService.playQuitSingle()
         SoundService.playQuitAll()
