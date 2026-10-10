@@ -19,13 +19,11 @@ struct DevServerRowView: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            // Checkbox matching QuitX
+
             QuitXSelectionCheckbox(isSelected: isSelected)
 
-            // App Icon
             AppIconView(bundleId: server.port.appBundleId, pid: server.port.pid, size: 18, cornerRadius: 3.5)
 
-            // Port badge
             Text(verbatim: ":\(server.port.port)")
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .padding(.horizontal, 5)
@@ -37,7 +35,6 @@ struct DevServerRowView: View {
                 .foregroundStyle(goldColor)
                 .layoutPriority(1)
 
-            // Details
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 4) {
                     Text(server.projectName)
@@ -63,7 +60,6 @@ struct DevServerRowView: View {
 
             Spacer(minLength: 4)
 
-            // Trace button
             Button {
                 ProcessTraceWindowController.shared.show(port: server.port)
             } label: {
@@ -77,7 +73,6 @@ struct DevServerRowView: View {
             .help("Trace dev server process ancestry")
             .layoutPriority(2)
 
-            // Tree kill button
             Button {
                 vm.confirmAndKillDevServer(server, force: vm.isOptionKeyPressed)
             } label: {

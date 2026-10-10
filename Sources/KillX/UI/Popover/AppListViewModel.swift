@@ -83,8 +83,6 @@ final class AppListViewModel: ObservableObject {
         currentQuote = quotes.randomElement() ?? "Find and kill the process using a port ⚡"
     }
 
-    // MARK: - Filtered Lists
-
     var filteredPorts: [PortInfo] {
         var list = ports
         let excluded = Set(configStore.config.excludePorts)
@@ -115,8 +113,6 @@ final class AppListViewModel: ObservableObject {
         filteredPorts.count
     }
 
-    // MARK: - Selection
-
     var isAllSelected: Bool {
         let visible = filteredPorts
         return !visible.isEmpty && visible.allSatisfy { selectedPorts.contains($0.id) }
@@ -144,8 +140,6 @@ final class AppListViewModel: ObservableObject {
             selectedPorts.insert(port.id)
         }
     }
-
-    // MARK: - Refresh
 
     func refresh() async {
         isLoading = true
@@ -186,8 +180,6 @@ final class AppListViewModel: ObservableObject {
         selectedPorts = selectedPorts.intersection(validPortIds)
     }
 
-    // MARK: - Port Actions
- 
     func confirmAndKillPort(_ port: PortInfo, force: Bool = false, tree: Bool = false) {
         let isForced = force || isOptionKeyPressed || configStore.config.force == .force
         let useTree = tree || configStore.config.treeKillByDefault
@@ -373,8 +365,6 @@ final class AppListViewModel: ObservableObject {
         }
     }
 
-    // MARK: - Dev Server Sweeper
-
     func sweepDevServers(force: Bool = false) async {
         let count = await DevServerService.shared.sweepAllDevServers(force: force)
         if count > 0 {
@@ -393,8 +383,6 @@ final class AppListViewModel: ObservableObject {
     func quitAll(force: Bool = false) async {
         confirmAndKillSelectedPorts(force: force, tree: configStore.config.treeKillByDefault)
     }
-
-    // MARK: - Process Tree Trace
 
     func tracePort(_ port: PortInfo) async {
         inspectedPort = port

@@ -12,7 +12,6 @@ struct ProcessTraceWindowView: View {
         VStack(spacing: 0) {
             header
 
-            // Header info
             HStack(spacing: 12) {
                 AppIconView(bundleId: port.appBundleId, pid: port.pid, size: 34, cornerRadius: 7.5)
 
@@ -60,7 +59,6 @@ struct ProcessTraceWindowView: View {
 
             Divider()
 
-            // Tree list
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     if ancestry.isEmpty {
@@ -74,7 +72,7 @@ struct ProcessTraceWindowView: View {
                     } else {
                         ForEach(Array(ancestry.enumerated()), id: \.element.id) { index, node in
                             HStack(alignment: .top, spacing: 8) {
-                                // Tree branch indicator
+
                                 Text(index == 0 ? "●" : "└─")
                                     .font(.system(size: 11, design: .monospaced))
                                     .foregroundStyle(node.isListener ? accentColor : Color.secondary.opacity(0.7))
@@ -133,7 +131,6 @@ struct ProcessTraceWindowView: View {
 
             Divider()
 
-            // Footer
             HStack {
                 Spacer()
                 Button("Close") {

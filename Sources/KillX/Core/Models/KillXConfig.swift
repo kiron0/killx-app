@@ -13,7 +13,6 @@ struct KillXConfig: Codable, Equatable {
     var dockerStopTimeout: Int
     var liquidGlassEnabled: Bool = true
 
-    // Backward compatibility properties
     var disableQuitTips: Bool {
         get { disableTips }
         set { disableTips = newValue }

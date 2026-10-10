@@ -96,8 +96,6 @@ struct MainPopoverView: View {
         }
     }
 
-    // MARK: - Primary Action Button
-
     private var primaryActionButton: some View {
         let isForced = vm.isOptionKeyPressed || configStore.config.force == .force
         let selectedCount = vm.selectedPorts.count
@@ -161,8 +159,6 @@ struct MainPopoverView: View {
         .onHover { uiState.isActionButtonHovered = $0 }
     }
 
-    // MARK: - Search Bar & Select All
-
     private var searchBarRow: some View {
         HStack(spacing: 8) {
             Button {
@@ -212,8 +208,6 @@ struct MainPopoverView: View {
         }
     }
 
-    // MARK: - Empty State
-
     private var emptyPortsView: some View {
         VStack(spacing: 10) {
             Spacer()
@@ -229,8 +223,6 @@ struct MainPopoverView: View {
         }
         .frame(maxHeight: .infinity)
     }
-
-    // MARK: - Footer
 
     private var footerRow: some View {
         HStack {

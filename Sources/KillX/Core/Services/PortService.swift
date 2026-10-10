@@ -24,8 +24,6 @@ public final class PortService {
         return false
     }
 
-    // MARK: - Fetch Listening Ports
-
     public func fetchListeningPorts() async -> [PortInfo] {
         guard let output = await runLsof() else { return [] }
         let parsed = parseLsofOutput(output)
@@ -82,8 +80,6 @@ public final class PortService {
         return results
     }
 
-    // MARK: - Kill Operations
-
     @discardableResult
     public func killPort(_ port: PortInfo, force: Bool = false, tree: Bool = false) async -> Bool {
         if let docker = port.docker {
@@ -98,7 +94,7 @@ public final class PortService {
         let res = Darwin.kill(port.pid, sig)
         if res == 0 {
             if !force {
-                // Poll briefly, escalate to SIGKILL if still alive after 1s
+
                 for _ in 0..<10 {
                     try? await Task.sleep(nanoseconds: 100_000_000)
                     if Darwin.kill(port.pid, 0) != 0 { return true }
@@ -120,8 +116,6 @@ public final class PortService {
         return killedCount
     }
 
-    // MARK: - Dev Servers Sweep
-
     @discardableResult
     public func sweepDevServers(force: Bool = false) async -> [PortInfo] {
         let ports = await fetchListeningPorts()
@@ -131,8 +125,6 @@ public final class PortService {
         }
         return devPorts
     }
-
-    // MARK: - Process Tree & Trace
 
     public func traceProcessTree(pid: pid_t) async -> [ProcessTreeNodeInfo] {
         let allProcs = await fetchAllProcesses()
@@ -207,8 +199,6 @@ public final class PortService {
 
         return true
     }
-
-    // MARK: - Helpers
 
     private struct RawParsedLsof {
         var pid: pid_t = 0
@@ -491,8 +481,6 @@ public final class PortService {
         return usages
     }
 
-    // MARK: - App & Identity Resolution
-
     public struct AppResolution: Sendable {
         public let appName: String
         public let bundleId: String?
@@ -510,24 +498,21 @@ public final class PortService {
         docker: DockerInfo? = nil,
         allProcs: [pid_t: RawProcessItem]? = nil
     ) -> AppResolution {
-        // 1. Docker container check
+
         if let docker {
             let name = docker.name.isEmpty ? "Docker" : "Docker (\(docker.name))"
             return AppResolution(appName: name, bundleId: "com.docker.docker")
         }
 
-        // 2. Direct running GUI application
         if let running = NSRunningApplication(processIdentifier: pid),
            let name = running.localizedName, !name.isEmpty {
             return AppResolution(appName: name, bundleId: running.bundleIdentifier)
         }
 
-        // 3. Inspect executable path of the process itself (.app bundle check)
         if let app = appFromProcPath(pid: pid) {
             return app
         }
 
-        // 4. Trace ancestor processes for parent GUI apps (IDE, Terminal, etc.)
         if let procs = allProcs {
             var curr = pid
             var seen = Set<pid_t>()
@@ -550,7 +535,6 @@ public final class PortService {
             }
         }
 
-        // 5. Clean name mappings for known dev runtimes/servers
         let cleanName = cleanRuntimeName(processName: processName, command: command)
         return AppResolution(appName: cleanName, bundleId: nil)
     }

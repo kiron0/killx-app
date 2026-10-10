@@ -162,4 +162,3 @@ struct AppListViewModelTests {
         ConfigStore.shared.config.confirmKill = true
     }
 }
-

@@ -37,7 +37,6 @@ public final class DockerService {
                 let image = (obj["Image"] as? String) ?? "unknown"
                 let ports = (obj["Ports"] as? String) ?? ""
 
-                // Extract published ports
                 let published = extractPorts(from: ports)
                 for port in published {
                     list.append(DockerInfo(

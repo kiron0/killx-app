@@ -27,13 +27,11 @@ struct PortRowView: View {
         let isForced = vm.isOptionKeyPressed || ConfigStore.shared.config.force == .force
 
         HStack(spacing: 6) {
-            // Checkbox matching QuitX
+
             QuitXSelectionCheckbox(isSelected: isSelected)
 
-            // App Icon
             AppIconView(bundleId: port.appBundleId, pid: port.pid, size: 18, cornerRadius: 3.5)
 
-            // Port badge
             Text(verbatim: ":\(port.port)")
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
                 .padding(.horizontal, 4.5)
@@ -45,7 +43,6 @@ struct PortRowView: View {
                 .foregroundStyle(port.isDevServer ? accentColor : Color.primary)
                 .layoutPriority(1)
 
-            // Process & App info
             HStack(spacing: 4) {
                 Text(port.displayAppName)
                     .font(.system(size: 12.5, weight: .regular))
@@ -80,7 +77,6 @@ struct PortRowView: View {
                     .layoutPriority(2)
             }
 
-            // Row Options Menu button using QuitXMenuButton
             QuitXMenuButton(
                 assetName: "menu-options",
                 systemSymbolName: "ellipsis",
@@ -95,7 +91,6 @@ struct PortRowView: View {
             .frame(width: 16, height: 16)
             .layoutPriority(2)
 
-            // Quick Kill button matching QuitX styling
             Button {
                 vm.confirmAndKillPort(port, force: isForced, tree: false)
             } label: {

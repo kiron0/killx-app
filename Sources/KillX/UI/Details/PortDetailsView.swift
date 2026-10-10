@@ -16,7 +16,6 @@ struct PortDetailsView: View {
         VStack(spacing: 0) {
             header
 
-            // Header info
             HStack(spacing: 12) {
                 AppIconView(bundleId: port.appBundleId, pid: port.pid, size: 36, cornerRadius: 8)
 
@@ -50,7 +49,6 @@ struct PortDetailsView: View {
 
             Divider()
 
-            // Details list
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
                     detailRow(label: "Application", value: port.displayAppName)
@@ -97,7 +95,6 @@ struct PortDetailsView: View {
 
             Divider()
 
-            // Footer actions
             HStack(spacing: 10) {
                 Button {
                     copyAllDetails()
