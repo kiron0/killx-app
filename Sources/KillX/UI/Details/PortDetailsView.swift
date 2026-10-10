@@ -129,7 +129,15 @@ struct PortDetailsView: View {
             .padding(.vertical, 12)
         }
         .frame(minWidth: 440, maxWidth: .infinity, minHeight: 380, maxHeight: .infinity)
-        .background(KillXTheme.windowBackground)
+        .background {
+            if LiquidGlass.enabled {
+                LiquidGlassFill(shape: Rectangle())
+                    .ignoresSafeArea()
+            } else {
+                QuitXTheme.windowBackground
+                    .ignoresSafeArea()
+            }
+        }
         .ignoresSafeArea()
     }
 
@@ -139,7 +147,7 @@ struct PortDetailsView: View {
             .foregroundStyle(Color.primary)
             .frame(maxWidth: .infinity)
             .frame(height: 38)
-            .background(KillXTheme.windowBackground)
+            .background(QuitXTheme.cardBackground)
     }
 
     private func detailRow(label: String, value: String) -> some View {
@@ -194,8 +202,10 @@ final class PortDetailsWindowController: NSObject, NSWindowDelegate {
         if let win = self.window {
             let rootView = PortDetailsView(port: port, onClose: { [weak self] in self?.close() })
             win.contentViewController = NSHostingController(rootView: rootView)
-            win.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
+            if let screen = WindowPositioner.targetScreen {
+                win.setFrameOrigin(WindowPositioner.topBiasedOrigin(for: win.frame.size, on: screen))
+            }
+            WindowAnimator.activateExisting(win)
             return
         }
 
@@ -211,25 +221,39 @@ final class PortDetailsWindowController: NSObject, NSWindowDelegate {
         win.minSize = win.frame.size
         win.maxSize = win.frame.size
         win.collectionBehavior = [.fullScreenNone]
-        win.isOpaque = true
+        if LiquidGlass.enabled {
+            win.isOpaque = false
+            win.backgroundColor = .clear
+        } else {
+            win.isOpaque = true
+            win.backgroundColor = QuitXTheme.windowBackgroundNSColor
+        }
         win.isReleasedWhenClosed = false
-        win.backgroundColor = KillXTheme.windowBackgroundNSColor
         win.appearance = NSApp.effectiveAppearance
         win.isMovableByWindowBackground = true
+        win.animationBehavior = .none
         win.delegate = self
-        win.center()
         self.window = win
 
-        win.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
+        WindowActivationCoordinator.update()
+        let targetFrame: NSRect
+        if let screen = WindowPositioner.targetScreen {
+            targetFrame = WindowPositioner.topBiasedFrame(for: win.frame.size, on: screen)
+        } else {
+            win.center()
+            targetFrame = win.frame
+        }
+        WindowAnimator.present(win, targetFrame: targetFrame)
     }
 
     func close() {
         window?.close()
         window = nil
+        WindowActivationCoordinator.update()
     }
 
     func windowWillClose(_ notification: Notification) {
         window = nil
+        WindowActivationCoordinator.update()
     }
 }

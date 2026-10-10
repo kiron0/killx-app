@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import Combine
 
 enum SettingsTab: String, CaseIterable {
     case general = "General"
@@ -45,7 +46,9 @@ enum SettingsTab: String, CaseIterable {
 
     var contentHeight: CGFloat {
         switch self {
-        case .general:   return 340
+        case .general:
+            if #available(macOS 26.0, *) { return 370 }
+            return 340
         case .shortcuts: return 215
         case .support:   return 139
         case .about:     return 130
@@ -53,36 +56,129 @@ enum SettingsTab: String, CaseIterable {
     }
 }
 
-final class HelpPopoverState: ObservableObject {
+final class HelpPopoverState: NSObject, ObservableObject {
+    private static var activeStates = NSHashTable<HelpPopoverState>.weakObjects()
+
     @Published var isShowing = false
+    @Published var isHovered = false
+    weak var anchorView: NSView?
+    private var window: ArrowPopoverWindow?
+    private var dismissObserver: AnyCancellable?
+    private var localMonitor: Any?
+    private var globalMonitor: Any?
+
+    static func closeAll() {
+        for state in activeStates.allObjects { state.close() }
+    }
+
+    override init() {
+        super.init()
+        dismissObserver = NotificationCenter.default.publisher(for: KillXConstants.Notifications.dismissSettingsTooltips)
+            .sink { [weak self] notification in
+                guard let self else { return }
+                if let obj = notification.object as? NSObject, obj === self { return }
+                self.close()
+            }
+    }
+
+    deinit {
+        if let localMonitor { NSEvent.removeMonitor(localMonitor) }
+        if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
+        window?.orderOut(nil)
+    }
+
+    func toggle(text: String) {
+        if isShowing { close() } else { show(text: text) }
+    }
+
+    func hide() { close() }
+
+    private func close() {
+        if isShowing {
+            window?.orderOut(nil)
+            isShowing = false
+            isHovered = false
+            Self.activeStates.remove(self)
+        }
+        if let localMonitor { NSEvent.removeMonitor(localMonitor); self.localMonitor = nil }
+        if let globalMonitor { NSEvent.removeMonitor(globalMonitor); self.globalMonitor = nil }
+    }
+
+    private func show(text: String) {
+        guard let anchor = anchorView, let anchorWindow = anchor.window else { return }
+        NotificationCenter.default.post(name: KillXConstants.Notifications.dismissSettingsTooltips, object: self)
+
+        let anchorScreenRect = anchorWindow.convertToScreen(anchor.convert(anchor.bounds, to: nil))
+        let hostView = NSHostingView(rootView: HelpPopoverContentView(text: text))
+        let size = hostView.fittingSize
+
+        var originX = anchorScreenRect.midX - size.width / 2
+        if let screen = anchorWindow.screen ?? NSScreen.main {
+            originX = max(screen.visibleFrame.minX + 4, min(originX, screen.visibleFrame.maxX - size.width - 4))
+        }
+        let originY = anchorScreenRect.minY - size.height - 2
+        let arrowX = anchorScreenRect.midX - originX
+        hostView.rootView = HelpPopoverContentView(text: text, arrowX: arrowX)
+
+        let win: ArrowPopoverWindow
+        if let existing = window {
+            win = existing
+        } else {
+            let created = ArrowPopoverWindow()
+            window = created
+            win = created
+        }
+        win.contentView = hostView
+        win.setContentSize(size)
+        win.setFrame(NSRect(x: originX, y: originY, width: size.width, height: size.height), display: true)
+        win.invalidateShadow()
+
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .keyDown]) { [weak self] event in
+            guard let self, self.isShowing else { return event }
+            if event.type == .keyDown {
+                if event.keyCode == 53 {
+                    self.close()
+                    return nil
+                }
+                return event
+            }
+            guard let anchor = self.anchorView, let anchorWindow = anchor.window else {
+                self.close()
+                return event
+            }
+            guard event.window === anchorWindow else {
+                self.close()
+                return event
+            }
+            let onAnchor: Bool
+            if let superview = anchor.superview {
+                let point = superview.convert(event.locationInWindow, from: nil)
+                onAnchor = anchor.frame.contains(point)
+            } else {
+                onAnchor = false
+            }
+            self.close()
+            return onAnchor ? nil : event
+        }
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] _ in
+            Task { @MainActor in self?.close() }
+        }
+
+        NSApp.activate(ignoringOtherApps: true)
+        win.makeKeyAndOrderFront(nil)
+        isShowing = true
+        Self.activeStates.add(self)
+    }
 }
 
-struct HelpPopoverButton: View {
+private struct HelpPopoverContentView: View {
     let text: String
-    @StateObject private var state = HelpPopoverState()
+    var arrowX: CGFloat? = nil
 
     var body: some View {
-        Button {
-            state.isShowing.toggle()
-        } label: {
-            if let icon = AssetImages.load("settings-default-help") {
-                Image(nsImage: icon)
-                    .renderingMode(.template)
-                    .resizable()
-                    .frame(width: 13, height: 13)
-                    .foregroundStyle(state.isShowing ? Color.primary : Color.secondary)
-                    .frame(width: 20, height: 20)
-                    .contentShape(Circle())
-            } else {
-                Image(systemName: "questionmark.circle")
-                    .font(.system(size: 13))
-                    .foregroundStyle(state.isShowing ? Color.primary : Color.secondary)
-                    .frame(width: 20, height: 20)
-                    .contentShape(Circle())
-            }
-        }
-        .buttonStyle(.plain)
-        .popover(isPresented: $state.isShowing, arrowEdge: .trailing) {
+        VStack(spacing: 0) {
+            Color.clear
+                .frame(height: 12)
             Text(text)
                 .font(.system(size: 11.5))
                 .foregroundStyle(Color.primary)
@@ -91,11 +187,51 @@ struct HelpPopoverButton: View {
                 .padding(.vertical, 10)
                 .frame(width: 230)
         }
+        .arrowPopoverChrome(arrowX: arrowX, classicBackground: AnyView(QuitXTheme.popoverBackground))
+    }
+}
+
+private struct PopoverAnchorView: NSViewRepresentable {
+    var onResolve: (NSView) -> Void
+
+    func makeNSView(context: Context) -> NSView {
+        let view = NSView()
+        DispatchQueue.main.async { onResolve(view) }
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {
+        DispatchQueue.main.async { onResolve(nsView) }
+    }
+}
+
+struct HelpPopoverButton: View {
+    let text: String
+    @StateObject private var state = HelpPopoverState()
+
+    var body: some View {
+        Button {
+            state.toggle(text: text)
+        } label: {
+            let isActive = state.isShowing || state.isHovered
+            Image(systemName: "questionmark.circle")
+                .font(.system(size: 13, weight: isActive ? .medium : .regular))
+                .foregroundStyle(isActive ? QuitXTheme.accent : Color.secondary)
+                .frame(width: 20, height: 20)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .onHover { h in state.isHovered = h }
+        .onDisappear {
+            state.hide()
+        }
+        .background(PopoverAnchorView { state.anchorView = $0 })
     }
 }
 
 final class SettingsTabViewModel: ObservableObject {
     @Published var activeTab: SettingsTab = .general
+    @Published var glassTopInset: CGFloat = 0
 }
 
 struct SettingsContainerView: View {
@@ -116,8 +252,31 @@ struct SettingsContainerView: View {
                 AboutTabCloneView()
             }
         }
-        .frame(width: 400, height: tabModel.activeTab.contentHeight, alignment: .top)
-        .background(KillXTheme.windowBackground)
+        .frame(width: 480, height: tabModel.activeTab.contentHeight, alignment: .top)
+        .overlay(alignment: .top) {
+            if LiquidGlass.enabled {
+                Color.primary.opacity(0.12)
+                    .frame(height: 0.5)
+            }
+        }
+        .background {
+            if LiquidGlass.enabled {
+                ZStack(alignment: .top) {
+                    LiquidGlassFill(shape: Rectangle())
+                    if tabModel.glassTopInset > 0 {
+                        QuitXTheme.cardBackground
+                            .frame(height: tabModel.glassTopInset)
+                    }
+                }
+                .ignoresSafeArea()
+            } else {
+                QuitXTheme.windowBackground
+            }
+        }
+        .onChange(of: tabModel.activeTab) { _, _ in
+            HelpPopoverState.closeAll()
+            NotificationCenter.default.post(name: KillXConstants.Notifications.dismissSettingsTooltips, object: nil)
+        }
     }
 }
 
@@ -131,11 +290,53 @@ struct SettingsView: View {
     }
 }
 
+fileprivate func toggle(_ title: String, isOn: Binding<Bool>) -> some View {
+    Button {
+        isOn.wrappedValue.toggle()
+    } label: {
+        HStack(spacing: 8) {
+            QuitXSelectionCheckbox(isSelected: isOn.wrappedValue)
+
+            Text(title)
+                .font(.system(size: 12, weight: .regular))
+                .foregroundStyle(Color.primary)
+        }
+    }
+    .buttonStyle(.plain)
+}
+
+fileprivate func appearanceRadio(_ title: String, selected: Bool, action: @escaping () -> Void) -> some View {
+    Button(action: action) {
+        HStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .strokeBorder(
+                        selected ? QuitXTheme.accent : Color.secondary.opacity(0.5),
+                        lineWidth: 1.5
+                    )
+                    .frame(width: 14, height: 14)
+                if selected {
+                    Circle()
+                        .fill(QuitXTheme.accent)
+                        .frame(width: 7, height: 7)
+                }
+            }
+            Text(title)
+                .font(.system(size: 12))
+                .foregroundStyle(Color.primary)
+        }
+    }
+    .buttonStyle(.plain)
+}
+
 struct GeneralTabCloneView: View {
     @EnvironmentObject private var configStore: ConfigStore
     @ObservedObject private var launchService = LaunchAtLoginService.shared
 
-    private let accent = KillXTheme.accent
+    private var tabHeight: CGFloat {
+        if #available(macOS 26.0, *) { return 370 }
+        return 340
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -194,6 +395,30 @@ struct GeneralTabCloneView: View {
                 HelpPopoverButton(text: "Hide the rotating tips at the bottom of the KillX popover.")
             }
 
+            if #available(macOS 26.0, *) {
+                row(label: "Appearance:") {
+                    HStack(spacing: 18) {
+                        appearanceRadio("Classic", selected: !configStore.config.liquidGlassEnabled) {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                configStore.config.liquidGlassEnabled = false
+                            }
+                            SettingsWindowController.shared.applyWindowChrome()
+                            configStore.save()
+                        }
+                        appearanceRadio("Liquid Glass", selected: configStore.config.liquidGlassEnabled) {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                configStore.config.liquidGlassEnabled = true
+                            }
+                            SettingsWindowController.shared.applyWindowChrome()
+                            configStore.save()
+                        }
+                    }
+                    .fixedSize()
+                } help: {
+                    HelpPopoverButton(text: "Classic retro solidity or futuristic translucent Liquid Glass drip. Dress your windows for success. 🔮🪞")
+                }
+            }
+
             row(label: "Sort by:") {
                 Picker("", selection: Binding(
                     get: { configStore.config.sortBy },
@@ -235,11 +460,10 @@ struct GeneralTabCloneView: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 20)
+        .padding(.horizontal, 24)
         .padding(.top, 14)
         .padding(.bottom, 10)
-        .frame(width: 400, height: 340, alignment: .topLeading)
-        .background(KillXTheme.windowBackground)
+        .frame(width: 480, height: tabHeight, alignment: .topLeading)
     }
 
     private func row<Content: View, Help: View>(
@@ -260,21 +484,6 @@ struct GeneralTabCloneView: View {
             help()
         }
         .frame(height: 25)
-    }
-
-    private func toggle(_ title: String, isOn: Binding<Bool>) -> some View {
-        Button {
-            isOn.wrappedValue.toggle()
-        } label: {
-            HStack(spacing: 8) {
-                QuitXSelectionCheckbox(isSelected: isOn.wrappedValue)
-
-                Text(title)
-                    .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(Color.primary)
-            }
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -382,7 +591,6 @@ final class ShortcutsViewState: ObservableObject {
 struct ShortcutsTabCloneView: View {
     @ObservedObject private var sm = ShortcutManager.shared
     @StateObject private var viewState = ShortcutsViewState()
-    private let accent = KillXTheme.accent
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -409,11 +617,10 @@ struct ShortcutsTabCloneView: View {
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 28)
         .padding(.top, 18)
         .padding(.bottom, 14)
-        .frame(width: 400, height: 215, alignment: .topLeading)
-        .background(KillXTheme.windowBackground)
+        .frame(width: 480, height: 215, alignment: .topLeading)
         .onAppear {
             viewState.startMonitor(sm: sm)
         }
@@ -453,7 +660,7 @@ struct ShortcutsTabCloneView: View {
                     if isRecording {
                         Text("Type keys...")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(KillXTheme.accent)
+                            .foregroundStyle(QuitXTheme.accent)
                     } else if keyList.isEmpty {
                         Text("None")
                             .font(.system(size: 11, weight: .regular))
@@ -480,7 +687,7 @@ struct ShortcutsTabCloneView: View {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 5)
-                        .stroke(isRecording ? KillXTheme.accent : Color.clear, lineWidth: 1.5)
+                        .stroke(isRecording ? QuitXTheme.accent : Color.clear, lineWidth: 1.5)
                 )
             }
             .buttonStyle(.plain)
@@ -529,8 +736,7 @@ struct SupportTabCloneView: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 28)
-        .frame(width: 400, height: 139, alignment: .topLeading)
-        .background(KillXTheme.windowBackground)
+        .frame(width: 480, height: 139, alignment: .topLeading)
     }
 }
 
@@ -571,7 +777,6 @@ struct AboutTabCloneView: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 30)
-        .frame(width: 400, height: 130)
-        .background(KillXTheme.windowBackground)
+        .frame(width: 480, height: 130)
     }
 }

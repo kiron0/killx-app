@@ -4,38 +4,46 @@ import SwiftUI
 @MainActor
 final class WelcomeWindowController: NSObject, NSWindowDelegate {
     static let shared = WelcomeWindowController()
+    private let windowWidth: CGFloat = 390
     private var window: NSWindow?
 
-    func showIfFirstLaunch() {
-        let key = "killx_first_launch_seen_v1"
-        if !UserDefaults.standard.bool(forKey: key) {
-            UserDefaults.standard.set(true, forKey: key)
+    static var firstLaunchSeenKey: String {
+        "killx_first_launch_seen_v1"
+    }
+
+    var isOpen: Bool { window != nil }
+
+    func showIfFirstLaunch(defaults: UserDefaults = .standard) {
+        if !defaults.bool(forKey: Self.firstLaunchSeenKey) {
+            defaults.set(true, forKey: Self.firstLaunchSeenKey)
             show()
         }
+    }
+
+    private static var isRunningTests: Bool {
+        NSClassFromString("XCTestCase") != nil
+            || ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+            || ProcessInfo.processInfo.processName.contains("Tests")
+            || ProcessInfo.processInfo.processName == "xctest"
     }
 
     func show() {
         StatusItemController.shared?.closePopover()
 
         if let win = window {
-            if let screen = NSScreen.main ?? NSScreen.screens.first {
-                let screenFrame = screen.visibleFrame
-                let x = screenFrame.origin.x + (screenFrame.width - 360) / 2
-                let y = screenFrame.origin.y + screenFrame.height - 370 - 110
-                win.setFrame(NSRect(x: x, y: y, width: 360, height: 370), display: true)
+            if !Self.isRunningTests {
+                if let screen = WindowPositioner.targetScreen {
+                    win.setFrameOrigin(WindowPositioner.topBiasedOrigin(for: win.frame.size, on: screen))
+                }
+                WindowAnimator.activateExisting(win)
             }
-            win.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
             return
         }
 
         let rootView = WelcomeView(
             onDismiss: { [weak self] in
                 self?.close()
-            },
-            onOpenSettings: { [weak self] in
-                self?.close()
-                SettingsWindowController.shared.show()
+                StatusItemController.shared?.showPopover()
             }
         ).environmentObject(ConfigStore.shared)
 
@@ -46,47 +54,46 @@ final class WelcomeWindowController: NSObject, NSWindowDelegate {
         win.titlebarAppearsTransparent = true
         win.titlebarSeparatorStyle = .none
         win.titleVisibility = .hidden
-        win.setContentSize(NSSize(width: 360, height: 370))
-        win.isOpaque = true
-        win.backgroundColor = KillXTheme.windowBackgroundNSColor
-        win.appearance = NSApp.effectiveAppearance
+        let fittingSize = hosting.sizeThatFits(
+            in: NSSize(width: windowWidth, height: .greatestFiniteMagnitude)
+        )
+        win.setContentSize(NSSize(width: windowWidth, height: ceil(fittingSize.height)))
+        win.isOpaque = false
+        win.backgroundColor = .clear
         win.isMovableByWindowBackground = true
+        win.hidesOnDeactivate = false
         win.standardWindowButton(.closeButton)?.isEnabled = true
         win.standardWindowButton(.closeButton)?.isHidden = false
         win.hasShadow = true
         win.isReleasedWhenClosed = false
+        win.animationBehavior = .none
         win.delegate = self
         self.window = win
 
+        guard !Self.isRunningTests else { return }
+
+        WindowActivationCoordinator.update()
+        win.orderFrontRegardless()
+
         let targetFrame: NSRect
-        if let screen = NSScreen.main ?? NSScreen.screens.first {
-            let screenFrame = screen.visibleFrame
-            let x = screenFrame.origin.x + (screenFrame.width - 360) / 2
-            let y = screenFrame.origin.y + screenFrame.height - 370 - 110
-            targetFrame = NSRect(x: x, y: y, width: 360, height: 370)
+        if let screen = WindowPositioner.targetScreen {
+            targetFrame = WindowPositioner.topBiasedFrame(for: win.frame.size, on: screen)
         } else {
             win.center()
             targetFrame = win.frame
         }
 
-        win.setFrame(targetFrame, display: false)
-        win.alphaValue = 0.0
-        win.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-
-        NSAnimationContext.runAnimationGroup { ctx in
-            ctx.duration = 0.15
-            ctx.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            win.animator().alphaValue = 1.0
-        }
+        WindowAnimator.present(win, targetFrame: targetFrame)
     }
 
     func close() {
         window?.close()
         window = nil
+        WindowActivationCoordinator.update()
     }
 
     func windowWillClose(_ notification: Notification) {
         window = nil
+        WindowActivationCoordinator.update()
     }
 }
