@@ -13,10 +13,10 @@ struct QuitXSelectionCheckbox: View {
             if isSelected {
                 Image(systemName: "checkmark")
                     .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(Color.black.opacity(0.9))
+                    .foregroundStyle(Color.white)
             } else if isPartial {
                 RoundedRectangle(cornerRadius: 1)
-                    .fill(Color.black.opacity(0.9))
+                    .fill(Color.white)
                     .frame(width: 6, height: 2)
             }
         }

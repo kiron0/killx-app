@@ -114,19 +114,19 @@ struct QuitConfirmationOverlay: View {
                     Button(action: onConfirm) {
                         Text(confirmTitle)
                             .font(.system(size: 11.5, weight: .bold))
-                            .foregroundStyle(isForced ? Color.white : Color.black.opacity(0.88))
+                            .foregroundStyle(Color.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 24)
                             .background(
                                 RoundedRectangle(cornerRadius: 6)
                                     .fill(
                                         isForced
-                                            ? LinearGradient(colors: [Color.red, Color(red: 210/255, green: 40/255, blue: 40/255)], startPoint: .top, endPoint: .bottom)
-                                            : LinearGradient(colors: [QuitXTheme.accent, Color(red: 232/255, green: 155/255, blue: 0/255)], startPoint: .top, endPoint: .bottom)
+                                            ? KillXTheme.forceGradient
+                                            : KillXTheme.accentGradient
                                     )
                             )
                             .shadow(
-                                color: (isForced ? Color.red : QuitXTheme.accent).opacity(state.isConfirmHovered ? 0.35 : 0.15),
+                                color: (isForced ? Color.red : KillXTheme.accent).opacity(state.isConfirmHovered ? 0.35 : 0.15),
                                 radius: 2,
                                 y: 1
                             )

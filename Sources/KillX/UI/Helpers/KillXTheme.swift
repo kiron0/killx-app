@@ -2,19 +2,20 @@ import SwiftUI
 import AppKit
 
 enum QuitXTheme {
-    static let accent = Color(red: 254/255, green: 188/255, blue: 51/255)
-    static let accentNSColor = NSColor(srgbRed: 254/255, green: 188/255, blue: 51/255, alpha: 1.0)
-    static let accentSecondary = Color(red: 232/255, green: 155/255, blue: 0/255)
-    static let accentLight = accentSecondary
-    static let goldGradient = LinearGradient(
+    static let accent = Color(red: 232/255, green: 50/255, blue: 62/255)
+    static let accentNSColor = NSColor(srgbRed: 232/255, green: 50/255, blue: 62/255, alpha: 1.0)
+    static let accentSecondary = Color(red: 200/255, green: 30/255, blue: 42/255)
+    static let accentLight = Color(red: 245/255, green: 75/255, blue: 85/255)
+    static let redGradient = LinearGradient(
         colors: [accent, accentSecondary],
         startPoint: .top,
         endPoint: .bottom
     )
-    static let accentGradient = goldGradient
-    static let forceColor = Color(red: 240/255, green: 70/255, blue: 50/255)
+    static let accentGradient = redGradient
+    static let goldGradient = redGradient
+    static let forceColor = Color(red: 255/255, green: 40/255, blue: 40/255)
     static let forceGradient = LinearGradient(
-        colors: [Color.red, Color(red: 210/255, green: 40/255, blue: 40/255)],
+        colors: [Color(red: 255/255, green: 55/255, blue: 55/255), Color(red: 195/255, green: 20/255, blue: 25/255)],
         startPoint: .top,
         endPoint: .bottom
     )

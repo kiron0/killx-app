@@ -12,7 +12,7 @@ struct PortRowView: View {
 
     @StateObject private var state = RowUIState()
 
-    private let goldColor = QuitXTheme.accent
+    private let accentColor = KillXTheme.accent
     private let forceColor = Color.red
 
     private var isSelected: Bool {
@@ -40,9 +40,9 @@ struct PortRowView: View {
                 .padding(.vertical, 1.8)
                 .background(
                     RoundedRectangle(cornerRadius: 3.5)
-                        .fill(port.isDevServer ? goldColor.opacity(0.18) : Color.primary.opacity(0.08))
+                        .fill(port.isDevServer ? accentColor.opacity(0.18) : Color.primary.opacity(0.08))
                 )
-                .foregroundStyle(port.isDevServer ? goldColor : Color.primary)
+                .foregroundStyle(port.isDevServer ? accentColor : Color.primary)
                 .layoutPriority(1)
 
             // Process & App info
@@ -139,7 +139,7 @@ struct PortRowView: View {
 
     @ViewBuilder
     private func quitButtonIcon(isForced: Bool) -> some View {
-        let activeColor = isForced ? forceColor : goldColor
+        let activeColor = isForced ? forceColor : accentColor
 
         ZStack {
             Color.clear
@@ -148,7 +148,7 @@ struct PortRowView: View {
             if isPending {
                 ProgressView()
                     .controlSize(.small)
-                    .tint(goldColor)
+                    .tint(accentColor)
                     .scaleEffect(0.55)
                     .frame(width: 18, height: 18)
             } else if isForced {

@@ -11,17 +11,9 @@ struct MainPopoverView: View {
     @ObservedObject private var vm = AppListViewModel.shared
     @StateObject private var uiState = PopoverUIState()
 
-    private static let goldColor = QuitXTheme.accent
-    private static let goldGradient = LinearGradient(
-        colors: [QuitXTheme.accent, Color(red: 232/255, green: 155/255, blue: 0/255)],
-        startPoint: .top,
-        endPoint: .bottom
-    )
-    private static let forceGradient = LinearGradient(
-        colors: [Color.red, Color(red: 210/255, green: 40/255, blue: 40/255)],
-        startPoint: .top,
-        endPoint: .bottom
-    )
+    private static let accentColor = KillXTheme.accent
+    private static let accentGradient = KillXTheme.accentGradient
+    private static let forceGradient = KillXTheme.forceGradient
 
     var body: some View {
         VStack(spacing: 0) {
@@ -145,20 +137,20 @@ struct MainPopoverView: View {
             }
             .foregroundStyle(
                 isEnabled
-                    ? (isForced ? Color.white : Color.black.opacity(0.88))
+                    ? Color.white
                     : Color.primary.opacity(0.35)
             )
             .frame(maxWidth: .infinity)
             .frame(height: 24)
             .background(
                 isEnabled
-                    ? (isForced ? Self.forceGradient : Self.goldGradient)
+                    ? (isForced ? Self.forceGradient : Self.accentGradient)
                     : LinearGradient(colors: [Color.primary.opacity(0.08), Color.primary.opacity(0.08)], startPoint: .top, endPoint: .bottom)
             )
             .clipShape(RoundedRectangle(cornerRadius: 6))
             .shadow(
                 color: isEnabled
-                    ? (isForced ? Color.red.opacity(uiState.isActionButtonHovered ? 0.35 : 0.15) : Self.goldColor.opacity(uiState.isActionButtonHovered ? 0.3 : 0.12))
+                    ? (isForced ? Color.red.opacity(uiState.isActionButtonHovered ? 0.35 : 0.15) : Self.accentColor.opacity(uiState.isActionButtonHovered ? 0.3 : 0.12))
                     : Color.clear,
                 radius: 2,
                 y: 1
@@ -227,7 +219,7 @@ struct MainPopoverView: View {
             Spacer()
             Image(systemName: "sparkles")
                 .font(.system(size: 32))
-                .foregroundStyle(Self.goldColor)
+                .foregroundStyle(Self.accentColor)
             Text(vm.searchQuery.isEmpty ? "All clean! No active listening ports." : "No ports match '\(vm.searchQuery)'")
                 .font(.system(size: 12.5))
                 .foregroundStyle(Color.secondary)
