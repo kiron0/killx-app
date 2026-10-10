@@ -65,7 +65,7 @@ struct MainPopoverView: View {
                 .padding(.top, 3)
                 .padding(.bottom, 6)
         }
-        .frame(width: 270)
+        .frame(width: StatusItemController.popoverWidth)
         .frame(minHeight: 220)
         .frame(maxHeight: .infinity)
         .arrowPopoverChrome(arrowX: vm.arrowX, classicBackground: AnyView(QuitXTheme.popoverBackground))
@@ -309,9 +309,10 @@ struct MainPopoverView: View {
                     .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(Color.secondary)
                     .lineLimit(1)
+                    .truncationMode(.tail)
             }
 
-            Spacer()
+            Spacer(minLength: 8)
 
             QuitXMenuButton(
                 assetName: "settings",
@@ -325,6 +326,7 @@ struct MainPopoverView: View {
                 }
             )
             .frame(width: 22, height: 22)
+            .layoutPriority(2)
         }
     }
 

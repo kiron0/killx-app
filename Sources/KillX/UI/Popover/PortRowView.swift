@@ -43,6 +43,7 @@ struct PortRowView: View {
                         .fill(port.isDevServer ? goldColor.opacity(0.18) : Color.primary.opacity(0.08))
                 )
                 .foregroundStyle(port.isDevServer ? goldColor : Color.primary)
+                .layoutPriority(1)
 
             // Process & App info
             HStack(spacing: 4) {
@@ -56,6 +57,8 @@ struct PortRowView: View {
                 Text(verbatim: "(\(port.pid))")
                     .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(Color.secondary)
+                    .lineLimit(1)
+                    .layoutPriority(1)
 
                 if let docker = port.docker {
                     Text("docker")
@@ -66,8 +69,10 @@ struct PortRowView: View {
                         .foregroundStyle(Color.blue)
                         .clipShape(RoundedRectangle(cornerRadius: 3))
                         .help(docker.name)
+                        .layoutPriority(1)
                 }
             }
+            .layoutPriority(0)
 
             Spacer(minLength: 4)
 
@@ -77,6 +82,8 @@ struct PortRowView: View {
                     .font(.system(size: 10.5, design: .monospaced))
                     .foregroundStyle(Color.secondary)
                     .frame(width: 48, alignment: .trailing)
+                    .lineLimit(1)
+                    .layoutPriority(2)
             }
 
             // Row Options Menu button using QuitXMenuButton
@@ -92,6 +99,7 @@ struct PortRowView: View {
                 }
             )
             .frame(width: 16, height: 16)
+            .layoutPriority(2)
 
             // Quick Kill button matching QuitX styling
             Button {
@@ -104,6 +112,7 @@ struct PortRowView: View {
             .help(isPending ? "Operation in progress" : (isForced ? "Force kill :\(port.port) (SIGKILL)" : "Kill :\(port.port) (SIGTERM)"))
             .accessibilityLabel("Kill :\(port.port)")
             .onHover { h in state.isQuitHovered = h }
+            .layoutPriority(2)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 3.5)

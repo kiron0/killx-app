@@ -4,12 +4,14 @@
   "private": true,
   "description": "Build, install, and launch the native KillX macOS app.",
   "scripts": {
-    "build": "make bundle",
-    "test": "make test",
-    "clean": "make clean",
+    "build": "./Scripts/build.sh",
+    "test": "set -o pipefail && swift test --build-system native -Xswiftc -F -Xswiftc /Library/Developer/CommandLineTools/Library/Developer/Frameworks 2>&1 | LC_ALL=C sed -E '/warning:.*build-system native.*deprecated/d'",
+    "clean": "swift package clean && rm -rf .build/KillX.app .build/*.dmg",
     "install": "npm run build && mkdir -p \"$HOME/Applications\" && ditto .build/KillX.app \"$HOME/Applications/KillX.app\"",
     "open": "open \"$HOME/Applications/KillX.app\"",
     "ship": "./Scripts/ship.sh",
-    "start": "npm run ship"
+    "bump": "./Scripts/bump-version.sh",
+    "start": "npm run ship",
+    "fresh-install": "(defaults delete io.coreify.killx killx_first_launch_seen_v1 2>/dev/null || true) && npm run ship"
   }
 }

@@ -4,7 +4,7 @@ import SwiftUI
 @MainActor
 final class StatusItemController: NSObject {
     static weak var shared: StatusItemController?
-    static let popoverWidth: CGFloat = 270
+    static let popoverWidth: CGFloat = 340
 
     private var statusItem: NSStatusItem
     private var window: ArrowPopoverWindow?
@@ -156,7 +156,7 @@ final class StatusItemController: NSObject {
 
         var originX = frame.origin.x
         var originY = frame.origin.y
-        var arrowX: CGFloat = 135
+        var arrowX: CGFloat = 170
 
         if let button = statusItem.button, let btnWindow = button.window {
             let buttonScreenRect = btnWindow.convertToScreen(button.bounds)

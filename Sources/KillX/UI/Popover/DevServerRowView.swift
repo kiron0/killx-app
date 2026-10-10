@@ -35,6 +35,7 @@ struct DevServerRowView: View {
                         .fill(goldColor.opacity(0.18))
                 )
                 .foregroundStyle(goldColor)
+                .layoutPriority(1)
 
             // Details
             VStack(alignment: .leading, spacing: 1) {
@@ -48,13 +49,17 @@ struct DevServerRowView: View {
                     Text("(\(server.port.processName))")
                         .font(.system(size: 10))
                         .foregroundStyle(Color.secondary)
+                        .lineLimit(1)
+                        .layoutPriority(1)
                 }
 
                 Text(server.displayPath)
                     .font(.system(size: 9.5))
                     .foregroundStyle(Color.secondary)
                     .lineLimit(1)
+                    .truncationMode(.middle)
             }
+            .layoutPriority(0)
 
             Spacer(minLength: 4)
 
@@ -70,6 +75,7 @@ struct DevServerRowView: View {
             }
             .buttonStyle(.plain)
             .help("Trace dev server process ancestry")
+            .layoutPriority(2)
 
             // Tree kill button
             Button {
@@ -89,6 +95,7 @@ struct DevServerRowView: View {
             }
             .buttonStyle(.plain)
             .help("Terminate dev server and process tree")
+            .layoutPriority(2)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 3.5)

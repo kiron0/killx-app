@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -11,13 +11,13 @@ ALT_DEST_APP="$HOME/Applications/$APP_NAME.app"
 cd "$ROOT_DIR"
 
 echo "🧪 [1/5] Testing..."
-swift test --build-system native -Xswiftc -F/Library/Developer/CommandLineTools/Library/Developer/Frameworks 2>&1 | grep -v "build-system native" || true
+swift test --build-system native -Xswiftc -F -Xswiftc /Library/Developer/CommandLineTools/Library/Developer/Frameworks 2>&1 | LC_ALL=C sed -E '/warning:.*build-system native.*deprecated/d'
 
 echo "📦 [2/5] Bundling..."
-make bundle
+"$SCRIPT_DIR/build.sh"
 
 echo "🛑 [3/5] Killing running instances..."
-pkill -x "$APP_NAME" 2>/dev/null || pkill -f "$APP_NAME.app" 2>/dev/null || true
+pkill -x "$APP_NAME" 2>/dev/null || true
 sleep 0.5
 
 echo "🚚 [4/5] Installing..."
@@ -35,6 +35,6 @@ fi
 echo "✅ Installed to $TARGET_DEST"
 
 echo "🚀 [5/5] Launching $TARGET_DEST..."
-open "$TARGET_DEST"
+open -g "$TARGET_DEST"
 
 echo "✨ KillX successfully tested, bundled, installed, and launched!"
