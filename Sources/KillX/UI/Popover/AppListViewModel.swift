@@ -104,6 +104,7 @@ final class AppListViewModel: ObservableObject {
         guard !q.isEmpty else { return list }
         return list.filter {
             "\($0.port)".contains(q) ||
+            $0.displayAppName.lowercased().contains(q) ||
             $0.processName.lowercased().contains(q) ||
             $0.command.lowercased().contains(q) ||
             ($0.docker?.name.lowercased().contains(q) == true) ||

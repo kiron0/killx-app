@@ -41,6 +41,30 @@ struct PortServiceTests {
         let byCpu = ports.sorted { $0.cpuUsage > $1.cpuUsage }
         #expect(byCpu.map(\.port) == [8080, 3000, 5173])
     }
+
+    @Test("App resolution for runtimes and docker")
+    func testAppResolution() {
+        let service = PortService.shared
+        let dockerInfo = DockerInfo(
+            containerId: "abc",
+            name: "postgres-db",
+            image: "postgres:15",
+            ports: "5432",
+            publishedPort: 5432
+        )
+        let dockerRes = service.resolveApp(pid: 9999, processName: "com.docker.backend", docker: dockerInfo)
+        #expect(dockerRes.appName == "Docker (postgres-db)")
+        #expect(dockerRes.bundleId == "com.docker.docker")
+
+        let nodeRes = service.resolveApp(pid: 8888, processName: "node")
+        #expect(nodeRes.appName == "Node.js")
+
+        let pgRes = service.resolveApp(pid: 7777, processName: "postgres")
+        #expect(pgRes.appName == "PostgreSQL")
+
+        let redisRes = service.resolveApp(pid: 6666, processName: "redis-server")
+        #expect(redisRes.appName == "Redis")
+    }
 }
 
 @Suite("DevServerService Tests")

@@ -16,6 +16,13 @@ struct KillXApp: App {
                 }
                 .keyboardShortcut(",", modifiers: .command)
             }
+
+            CommandGroup(replacing: .help) {
+                Button("KillX Help") {
+                    HelpWindowController.shared.show()
+                }
+                .keyboardShortcut("?", modifiers: .command)
+            }
         }
     }
 }

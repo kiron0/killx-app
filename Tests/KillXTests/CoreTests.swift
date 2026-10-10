@@ -81,6 +81,36 @@ struct PortInfoTests {
         #expect(!port.isDevServer)
     }
 
+    @Test("PortInfo app display and identity")
+    func testPortInfoAppIdentity() {
+        let portWithApp = PortInfo(
+            port: 8080,
+            pid: 111,
+            processName: "Google Chrome Helper",
+            appName: "Google Chrome",
+            appBundleId: "com.google.Chrome"
+        )
+        #expect(portWithApp.displayAppName == "Google Chrome")
+        #expect(portWithApp.appName == "Google Chrome")
+        #expect(portWithApp.appBundleId == "com.google.Chrome")
+
+        let portDev = PortInfo(
+            port: 5173,
+            pid: 222,
+            processName: "vite",
+            isDevServer: true
+        )
+        #expect(portDev.displayAppName == "Vite")
+
+        let portDocker = PortInfo(
+            port: 6379,
+            pid: 333,
+            processName: "com.docker.backend",
+            docker: DockerInfo(containerId: "redis1", name: "cache-redis", image: "redis", ports: "6379", publishedPort: 6379)
+        )
+        #expect(portDocker.displayAppName == "cache-redis")
+    }
+
     @Test("DevServerInfo model properties")
     func testDevServerInfo() {
         let port = PortInfo(

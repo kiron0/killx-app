@@ -26,28 +26,32 @@ struct PortRowView: View {
     var body: some View {
         let isForced = vm.isOptionKeyPressed || ConfigStore.shared.config.force == .force
 
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             // Checkbox matching QuitX
             QuitXSelectionCheckbox(isSelected: isSelected)
+
+            // App Icon
+            AppIconView(bundleId: port.appBundleId, pid: port.pid, size: 18, cornerRadius: 3.5)
 
             // Port badge
             Text(verbatim: ":\(port.port)")
                 .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
+                .padding(.horizontal, 4.5)
+                .padding(.vertical, 1.8)
                 .background(
-                    RoundedRectangle(cornerRadius: 4)
+                    RoundedRectangle(cornerRadius: 3.5)
                         .fill(port.isDevServer ? goldColor.opacity(0.18) : Color.primary.opacity(0.08))
                 )
                 .foregroundStyle(port.isDevServer ? goldColor : Color.primary)
 
-            // Process info (clean name + pid)
+            // Process & App info
             HStack(spacing: 4) {
-                Text(port.processName)
-                    .font(.system(size: 12, weight: .regular))
+                Text(port.displayAppName)
+                    .font(.system(size: 12.5, weight: .regular))
                     .foregroundStyle(Color.primary)
                     .lineLimit(1)
                     .truncationMode(.tail)
+                    .help(port.command.isEmpty ? port.displayAppName : "\(port.displayAppName)\n\(port.command)")
 
                 Text(verbatim: "(\(port.pid))")
                     .font(.system(size: 10, design: .monospaced))
@@ -66,6 +70,14 @@ struct PortRowView: View {
             }
 
             Spacer(minLength: 4)
+
+            let usage = usageText
+            if !usage.isEmpty {
+                Text(usage)
+                    .font(.system(size: 10.5, design: .monospaced))
+                    .foregroundStyle(Color.secondary)
+                    .frame(width: 48, alignment: .trailing)
+            }
 
             // Row Options Menu button using QuitXMenuButton
             QuitXMenuButton(
@@ -107,6 +119,19 @@ struct PortRowView: View {
         )
         .onHover { h in state.isHovered = h }
         .opacity(isPending ? 0.72 : 1)
+    }
+
+    private var usageText: String {
+        switch ConfigStore.shared.config.sortBy {
+        case .memoryDesc:
+            return port.memoryBytes > 0 ? port.memoryFormatted : ""
+        case .cpuDesc:
+            return port.cpuUsage > 0 ? port.cpuFormatted : ""
+        case .portAsc, .portDesc, .name:
+            if port.memoryBytes > 0 { return port.memoryFormatted }
+            if port.cpuUsage > 0 { return port.cpuFormatted }
+            return ""
+        }
     }
 
     @ViewBuilder
@@ -163,6 +188,19 @@ struct PortRowView: View {
                 ProcessTraceWindowController.shared.show(port: port)
             }
         ))
+
+        let appUrl = (NSRunningApplication(processIdentifier: port.pid)?.bundleURL)
+            ?? (port.appBundleId.flatMap { NSWorkspace.shared.urlForApplication(withBundleIdentifier: $0) })
+        if let url = appUrl {
+            menu.addItem(MenuHelper.makeItem(
+                title: "Reveal App in Finder",
+                keyEquivalent: "f",
+                systemSymbolName: "folder",
+                action: {
+                    NSWorkspace.shared.activateFileViewerSelecting([url])
+                }
+            ))
+        }
 
         menu.addItem(.separator())
 

@@ -587,13 +587,13 @@ final class ShortcutsViewState: ObservableObject {
 
     func applyKeys(_ keys: [String], for row: String, sm: ShortcutManager) {
         switch row {
-        case "showPopover":
-            sm.showPopoverKeys = keys
+        case "activate", "showPopover":
+            sm.activateMenuKeys = keys
             sm.saveShowPopover()
-        case "quitAll":
+        case "quit", "quitAll":
             sm.quitAllKeys = keys
             sm.saveQuitAll()
-        case "forceQuitAll":
+        case "force", "forceQuitAll":
             sm.forceQuitAllKeys = keys
             sm.saveForceQuitAll()
         default:
@@ -639,22 +639,22 @@ struct ShortcutsTabCloneView: View {
         VStack(spacing: 0) {
             VStack(spacing: 12) {
                 shortcutLine(
-                    id: "showPopover",
-                    label: "Toggle Menu Bar:",
-                    isEnabled: $sm.showPopoverEnabled,
-                    keyList: sm.showPopoverKeys
+                    id: "activate",
+                    label: "Activate menu:",
+                    isEnabled: $sm.activateMenuEnabled,
+                    keyList: sm.activateMenuKeys
                 )
 
                 shortcutLine(
-                    id: "quitAll",
-                    label: "Sweep Dev Servers:",
+                    id: "quit",
+                    label: "Sweep dev servers:",
                     isEnabled: $sm.quitAllEnabled,
                     keyList: sm.quitAllKeys
                 )
 
                 shortcutLine(
-                    id: "forceQuitAll",
-                    label: "Force Kill Selected:",
+                    id: "force",
+                    label: "Force kill all:",
                     isEnabled: $sm.forceQuitAllEnabled,
                     keyList: sm.forceQuitAllKeys
                 )
@@ -686,6 +686,7 @@ struct ShortcutsTabCloneView: View {
             Spacer(minLength: 0)
         }
         .frame(width: 480, height: 221)
+        .background(QuitXTheme.paneBackground)
         .onAppear {
             viewState.startMonitor(sm: sm)
         }
@@ -707,7 +708,7 @@ struct ShortcutsTabCloneView: View {
             Text(label)
                 .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(Color.primary)
-                .frame(width: 130, alignment: .trailing)
+                .frame(width: 105, alignment: .trailing)
 
             Button {
                 isEnabled.wrappedValue.toggle()

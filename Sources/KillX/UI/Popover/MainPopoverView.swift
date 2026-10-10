@@ -373,8 +373,8 @@ struct MainPopoverView: View {
         ))
 
         menu.addItem(MenuHelper.makeItem(
-            title: "Help & Docs",
-            keyEquivalent: "h",
+            title: "Help",
+            keyEquivalent: "?",
             assetName: "settings-help",
             systemSymbolName: "questionmark.circle",
             action: {

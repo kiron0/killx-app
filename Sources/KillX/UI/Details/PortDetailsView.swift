@@ -18,22 +18,26 @@ struct PortDetailsView: View {
 
             // Header info
             HStack(spacing: 12) {
-                Text(verbatim: ":\(port.port)")
-                    .font(.system(size: 18, weight: .bold, design: .monospaced))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(port.isDevServer ? accentColor.opacity(0.18) : Color.primary.opacity(0.08))
-                    )
-                    .foregroundStyle(port.isDevServer ? accentColor : Color.primary)
+                AppIconView(bundleId: port.appBundleId, pid: port.pid, size: 36, cornerRadius: 8)
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(port.processName)
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Color.primary)
+                    HStack(spacing: 8) {
+                        Text(port.displayAppName)
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(Color.primary)
 
-                    Text(verbatim: "PID \(port.pid) • \(port.protocolName) \(port.state)")
+                        Text(verbatim: ":\(port.port)")
+                            .font(.system(size: 13, weight: .bold, design: .monospaced))
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(port.isDevServer ? accentColor.opacity(0.18) : Color.primary.opacity(0.08))
+                            )
+                            .foregroundStyle(port.isDevServer ? accentColor : Color.primary)
+                    }
+
+                    Text(verbatim: "\(port.processName) • PID \(port.pid) • \(port.protocolName) \(port.state)")
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundStyle(Color.secondary)
                 }
@@ -49,6 +53,10 @@ struct PortDetailsView: View {
             // Details list
             ScrollView {
                 VStack(alignment: .leading, spacing: 10) {
+                    detailRow(label: "Application", value: port.displayAppName)
+                    if let bundleId = port.appBundleId {
+                        detailRow(label: "Bundle Identifier", value: bundleId)
+                    }
                     detailRow(label: "Port Number", value: String(port.port))
                     detailRow(label: "Process ID", value: String(port.pid))
                     detailRow(label: "Process Name", value: port.processName)

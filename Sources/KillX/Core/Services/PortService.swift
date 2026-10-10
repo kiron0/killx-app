@@ -36,6 +36,7 @@ public final class PortService {
         let cwdMap = await fetchCwds(for: pids)
         let cpuMap = fetchCpuUsages()
         let dockerContainers = await DockerService.shared.fetchContainers()
+        let allProcs = await fetchAllProcesses()
 
         var results: [PortInfo] = []
         var seenKeys = Set<String>()
@@ -52,11 +53,14 @@ public final class PortService {
             let isDev = Self.isDevProcess(name: item.process, command: cmd)
 
             let docker = dockerContainers.first(where: { $0.publishedPort == item.port })
+            let appResolution = resolveApp(pid: item.pid, processName: item.process, command: cmd, docker: docker, allProcs: allProcs)
 
             results.append(PortInfo(
                 port: item.port,
                 pid: item.pid,
                 processName: item.process,
+                appName: appResolution.appName,
+                appBundleId: appResolution.bundleId,
                 command: cmd,
                 user: item.user,
                 protocolName: item.proto,
@@ -355,7 +359,7 @@ public final class PortService {
         }
     }
 
-    private struct RawProcessItem {
+    struct RawProcessItem {
         let pid: pid_t
         let ppid: pid_t
         let user: String
@@ -485,5 +489,112 @@ public final class PortService {
             }
         } catch {}
         return usages
+    }
+
+    // MARK: - App & Identity Resolution
+
+    public struct AppResolution: Sendable {
+        public let appName: String
+        public let bundleId: String?
+
+        public init(appName: String, bundleId: String? = nil) {
+            self.appName = appName
+            self.bundleId = bundleId
+        }
+    }
+
+    func resolveApp(
+        pid: pid_t,
+        processName: String,
+        command: String = "",
+        docker: DockerInfo? = nil,
+        allProcs: [pid_t: RawProcessItem]? = nil
+    ) -> AppResolution {
+        // 1. Docker container check
+        if let docker {
+            let name = docker.name.isEmpty ? "Docker" : "Docker (\(docker.name))"
+            return AppResolution(appName: name, bundleId: "com.docker.docker")
+        }
+
+        // 2. Direct running GUI application
+        if let running = NSRunningApplication(processIdentifier: pid),
+           let name = running.localizedName, !name.isEmpty {
+            return AppResolution(appName: name, bundleId: running.bundleIdentifier)
+        }
+
+        // 3. Inspect executable path of the process itself (.app bundle check)
+        if let app = appFromProcPath(pid: pid) {
+            return app
+        }
+
+        // 4. Trace ancestor processes for parent GUI apps (IDE, Terminal, etc.)
+        if let procs = allProcs {
+            var curr = pid
+            var seen = Set<pid_t>()
+            while curr > 1 && !seen.contains(curr) {
+                seen.insert(curr)
+                guard let item = procs[curr] else { break }
+                let parentPid = item.ppid
+                if parentPid <= 1 { break }
+
+                if let running = NSRunningApplication(processIdentifier: parentPid),
+                   let name = running.localizedName, !name.isEmpty {
+                    return AppResolution(appName: name, bundleId: running.bundleIdentifier)
+                }
+
+                if let app = appFromProcPath(pid: parentPid) {
+                    return app
+                }
+
+                curr = parentPid
+            }
+        }
+
+        // 5. Clean name mappings for known dev runtimes/servers
+        let cleanName = cleanRuntimeName(processName: processName, command: command)
+        return AppResolution(appName: cleanName, bundleId: nil)
+    }
+
+    private func appFromProcPath(pid: pid_t) -> AppResolution? {
+        var buffer = [CChar](repeating: 0, count: 4096)
+        let ret = proc_pidpath(pid, &buffer, UInt32(buffer.count))
+        guard ret > 0 else { return nil }
+        let path = String(cString: buffer)
+        guard let appRange = path.range(of: ".app") else { return nil }
+
+        let appBundlePath = String(path[..<appRange.upperBound])
+        if let bundle = Bundle(path: appBundlePath) {
+            let bundleId = bundle.bundleIdentifier
+            let name = (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
+                ?? (bundle.object(forInfoDictionaryKey: "CFBundleName") as? String)
+                ?? URL(fileURLWithPath: appBundlePath).deletingPathExtension().lastPathComponent
+            return AppResolution(appName: name, bundleId: bundleId)
+        }
+        let fallbackName = URL(fileURLWithPath: appBundlePath).deletingPathExtension().lastPathComponent
+        return AppResolution(appName: fallbackName, bundleId: nil)
+    }
+
+    private func cleanRuntimeName(processName: String, command: String) -> String {
+        let lower = processName.lowercased()
+        switch lower {
+        case "node": return "Node.js"
+        case "bun": return "Bun"
+        case "deno": return "Deno"
+        case "python", "python3": return "Python"
+        case "postgres": return "PostgreSQL"
+        case "redis-server": return "Redis"
+        case "mongod": return "MongoDB"
+        case "mysqld": return "MySQL"
+        case "nginx": return "Nginx"
+        case "caddy": return "Caddy"
+        case "cargo": return "Cargo"
+        case "go": return "Go"
+        case "ruby": return "Ruby"
+        case "java": return "Java"
+        case "php": return "PHP"
+        case "docker", "com.docker.backend": return "Docker"
+        default:
+            return processName
+        }
     }
 }

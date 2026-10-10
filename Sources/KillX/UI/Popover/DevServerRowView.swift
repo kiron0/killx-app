@@ -18,9 +18,12 @@ struct DevServerRowView: View {
     }
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             // Checkbox matching QuitX
             QuitXSelectionCheckbox(isSelected: isSelected)
+
+            // App Icon
+            AppIconView(bundleId: server.port.appBundleId, pid: server.port.pid, size: 18, cornerRadius: 3.5)
 
             // Port badge
             Text(verbatim: ":\(server.port.port)")

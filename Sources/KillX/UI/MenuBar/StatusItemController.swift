@@ -312,8 +312,8 @@ final class StatusItemController: NSObject {
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(MenuHelper.makeItem(
-            title: "Help & Docs",
-            keyEquivalent: "h",
+            title: "Help",
+            keyEquivalent: "?",
             assetName: "settings-help",
             systemSymbolName: "questionmark.circle",
             action: { [weak self] in

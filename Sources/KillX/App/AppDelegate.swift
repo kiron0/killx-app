@@ -58,11 +58,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.statusItemController?.showPopover()
             }
         }
+
+        DistributedNotificationCenter.default().addObserver(
+            forName: NSNotification.Name("io.coreify.killx.showHelp"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            Task { @MainActor in
+                HelpWindowController.shared.show()
+            }
+        }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         SingleInstanceService.shared.stopMonitoring()
         statusItemController = nil
+    }
+
+    @objc func showHelp(_ sender: Any?) {
+        Task { @MainActor in
+            HelpWindowController.shared.show()
+        }
     }
 
     @objc func showSettingsWindow(_ sender: Any?) {

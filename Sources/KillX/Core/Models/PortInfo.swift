@@ -53,6 +53,8 @@ public struct PortInfo: Identifiable, Hashable {
     public let port: Int
     public let pid: pid_t
     public let processName: String
+    public let appName: String?
+    public let appBundleId: String?
     public let command: String
     public let user: String
     public let protocolName: String
@@ -62,6 +64,16 @@ public struct PortInfo: Identifiable, Hashable {
     public let cwd: String?
     public let docker: DockerInfo?
     public let isDevServer: Bool
+
+    public var displayAppName: String {
+        if let appName, !appName.isEmpty {
+            return appName
+        }
+        if let docker {
+            return docker.name
+        }
+        return isDevServer ? processName.capitalized : processName
+    }
 
     public var memoryFormatted: String {
         MemoryFormatter.format(bytes: memoryBytes)
@@ -75,6 +87,8 @@ public struct PortInfo: Identifiable, Hashable {
         port: Int,
         pid: pid_t,
         processName: String,
+        appName: String? = nil,
+        appBundleId: String? = nil,
         command: String = "",
         user: String = "",
         protocolName: String = "TCP",
@@ -88,6 +102,8 @@ public struct PortInfo: Identifiable, Hashable {
         self.port = port
         self.pid = pid
         self.processName = processName
+        self.appName = appName
+        self.appBundleId = appBundleId
         self.command = command
         self.user = user
         self.protocolName = protocolName
