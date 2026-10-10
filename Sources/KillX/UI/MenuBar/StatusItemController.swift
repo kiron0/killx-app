@@ -316,10 +316,9 @@ final class StatusItemController: NSObject {
             keyEquivalent: "h",
             assetName: "settings-help",
             systemSymbolName: "questionmark.circle",
-            action: {
-                if let url = URL(string: "https://killx.js.org") {
-                    NSWorkspace.shared.open(url)
-                }
+            action: { [weak self] in
+                self?.closePopover()
+                HelpWindowController.shared.show()
             }
         ))
 
@@ -388,11 +387,9 @@ final class StatusItemController: NSObject {
                         self.closePopover()
                         SettingsWindowController.shared.show()
                         return nil
-                    } else if chars == "h" || chars == "?" {
+                    } else if chars == "h" || chars == "?" || (chars == "/" && event.modifierFlags.contains(.shift)) {
                         self.closePopover()
-                        if let url = URL(string: "https://killx.js.org") {
-                            NSWorkspace.shared.open(url)
-                        }
+                        HelpWindowController.shared.show()
                         return nil
                     } else if chars == "i" {
                         self.closePopover()

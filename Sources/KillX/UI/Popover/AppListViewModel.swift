@@ -37,7 +37,11 @@ final class AppListViewModel: ObservableObject {
     @Published var inspectedPort: PortInfo? = nil
     @Published var inspectedAncestry: [ProcessTreeNodeInfo] = []
     @Published var isTracingTree: Bool = false
-    @Published var pendingKillConfirmation: KillConfirmationRequest? = nil
+    @Published var pendingKillConfirmation: KillConfirmationRequest? = nil {
+        didSet {
+            StatusItemController.shared?.updatePopoverSize()
+        }
+    }
     @Published var arrowX: CGFloat = 135
     var popoverArrowX: CGFloat? {
         get { arrowX }

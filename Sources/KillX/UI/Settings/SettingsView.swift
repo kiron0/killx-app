@@ -47,11 +47,11 @@ enum SettingsTab: String, CaseIterable {
     var contentHeight: CGFloat {
         switch self {
         case .general:
-            if #available(macOS 26.0, *) { return 370 }
-            return 340
-        case .shortcuts: return 215
-        case .support:   return 139
-        case .about:     return 130
+            if #available(macOS 26.0, *) { return 320 }
+            return 290
+        case .shortcuts: return 221
+        case .support:   return 110
+        case .about:     return 115
         }
     }
 }
@@ -325,21 +325,49 @@ fileprivate func appearanceRadio(_ title: String, selected: Bool, action: @escap
                 .font(.system(size: 12))
                 .foregroundStyle(Color.primary)
         }
+        .contentShape(Rectangle())
     }
     .buttonStyle(.plain)
+}
+
+fileprivate let labelColumnWidth: CGFloat = 90
+
+fileprivate func row<Content: View, Help: View>(
+    label: String,
+    @ViewBuilder content: () -> Content,
+    @ViewBuilder help: () -> Help
+) -> some View {
+    HStack(alignment: .center, spacing: 10) {
+        Text(label)
+            .font(.system(size: 12, weight: .regular))
+            .foregroundStyle(Color.primary)
+            .frame(width: labelColumnWidth, alignment: .trailing)
+
+        content().fixedSize()
+
+        Spacer(minLength: 0)
+
+        help()
+    }
+    .frame(height: 25)
+}
+
+final class GeneralTabViewState: ObservableObject {
+    @Published var showResetConfirmation = false
 }
 
 struct GeneralTabCloneView: View {
     @EnvironmentObject private var configStore: ConfigStore
     @ObservedObject private var launchService = LaunchAtLoginService.shared
+    @StateObject private var viewState = GeneralTabViewState()
 
     private var tabHeight: CGFloat {
-        if #available(macOS 26.0, *) { return 370 }
-        return 340
+        if #available(macOS 26.0, *) { return 320 }
+        return 290
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 5) {
 
             row(label: "Startup:") {
                 toggle("Open KillX at login", isOn: $launchService.isEnabled)
@@ -449,41 +477,56 @@ struct GeneralTabCloneView: View {
             }
 
             row(label: "Reset:") {
-                Button("Reset all defaults") {
-                    configStore.config = KillXConfig.default
-                    configStore.save()
+                Button("Reset all") {
+                    viewState.showResetConfirmation = true
                 }
                 .font(.system(size: 11.5))
             } help: {
-                Color.clear.frame(width: 20, height: 20)
+                HelpPopoverButton(text: "The nuclear option! Wipes your preferences clean back to factory fresh. No hard feelings. 🧼💥")
             }
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 24)
+        .padding(.horizontal, 20)
         .padding(.top, 14)
         .padding(.bottom, 10)
         .frame(width: 480, height: tabHeight, alignment: .topLeading)
-    }
-
-    private func row<Content: View, Help: View>(
-        label: String,
-        @ViewBuilder content: () -> Content,
-        @ViewBuilder help: () -> Help
-    ) -> some View {
-        HStack(alignment: .center, spacing: 10) {
-            Text(label)
-                .font(.system(size: 12, weight: .regular))
-                .foregroundStyle(Color.primary)
-                .frame(width: 90, alignment: .trailing)
-
-            content()
-
-            Spacer(minLength: 0)
-
-            help()
+        .overlay {
+            if viewState.showResetConfirmation {
+                QuitConfirmationOverlay(
+                    title: "Reset All Preferences?",
+                    subtitle: "This will restore KillX to default factory settings.",
+                    confirmTitle: "Reset All",
+                    systemImage: "arrow.counterclockwise.circle.fill",
+                    isForced: true,
+                    cardWidth: 260,
+                    onConfirm: {
+                        configStore.config = KillXConfig.default
+                        configStore.save()
+                        ShortcutManager.shared.showPopoverEnabled = true
+                        ShortcutManager.shared.showPopoverKeys = ["⌥", "K"]
+                        ShortcutManager.shared.saveShowPopover()
+                        ShortcutManager.shared.quitAllEnabled = false
+                        ShortcutManager.shared.quitAllKeys = []
+                        ShortcutManager.shared.saveQuitAll()
+                        ShortcutManager.shared.forceQuitAllEnabled = false
+                        ShortcutManager.shared.forceQuitAllKeys = []
+                        ShortcutManager.shared.saveForceQuitAll()
+                        LaunchAtLoginService.shared.isEnabled = false
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            viewState.showResetConfirmation = false
+                        }
+                    },
+                    onCancel: {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            viewState.showResetConfirmation = false
+                        }
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
         }
-        .frame(height: 25)
+        .animation(.easeInOut(duration: 0.18), value: viewState.showResetConfirmation)
     }
 }
 
@@ -593,34 +636,56 @@ struct ShortcutsTabCloneView: View {
     @StateObject private var viewState = ShortcutsViewState()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            shortcutRow(
-                id: "showPopover",
-                title: "Toggle Menu Bar Popover",
-                isEnabled: $sm.showPopoverEnabled,
-                keyList: sm.showPopoverKeys
-            )
+        VStack(spacing: 0) {
+            VStack(spacing: 12) {
+                shortcutLine(
+                    id: "showPopover",
+                    label: "Toggle Menu Bar:",
+                    isEnabled: $sm.showPopoverEnabled,
+                    keyList: sm.showPopoverKeys
+                )
 
-            shortcutRow(
-                id: "quitAll",
-                title: "Sweep Dev Servers",
-                isEnabled: $sm.quitAllEnabled,
-                keyList: sm.quitAllKeys
-            )
+                shortcutLine(
+                    id: "quitAll",
+                    label: "Sweep Dev Servers:",
+                    isEnabled: $sm.quitAllEnabled,
+                    keyList: sm.quitAllKeys
+                )
 
-            shortcutRow(
-                id: "forceQuitAll",
-                title: "Force Kill Selected Ports",
-                isEnabled: $sm.forceQuitAllEnabled,
-                keyList: sm.forceQuitAllKeys
-            )
+                shortcutLine(
+                    id: "forceQuitAll",
+                    label: "Force Kill Selected:",
+                    isEnabled: $sm.forceQuitAllEnabled,
+                    keyList: sm.forceQuitAllKeys
+                )
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 20)
+
+            Divider()
+                .background(Color.primary.opacity(0.08))
+                .padding(.horizontal, 16)
+                .padding(.top, 18)
+                .padding(.bottom, 16)
+
+            HStack(spacing: 10) {
+                Text("⌥")
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(Color.primary)
+                    .frame(width: 22, height: 22)
+                    .background(Color.primary.opacity(0.1), in: RoundedRectangle(cornerRadius: 4))
+
+                Text("Hold down Option to toggle “Graceful” and “Force Kill”.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.secondary)
+
+                Spacer()
+            }
+            .padding(.horizontal, 24)
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 28)
-        .padding(.top, 18)
-        .padding(.bottom, 14)
-        .frame(width: 480, height: 215, alignment: .topLeading)
+        .frame(width: 480, height: 221)
         .onAppear {
             viewState.startMonitor(sm: sm)
         }
@@ -629,20 +694,20 @@ struct ShortcutsTabCloneView: View {
         }
     }
 
-    private func shortcutRow(
+    private func shortcutLine(
         id: String,
-        title: String,
+        label: String,
         isEnabled: Binding<Bool>,
         keyList: [String]
     ) -> some View {
         let isRecording = (viewState.recordingRow == id)
         let active = isEnabled.wrappedValue
 
-        return HStack(alignment: .center, spacing: 10) {
-            Text(title)
-                .font(.system(size: 12, weight: .regular))
+        return HStack(spacing: 9) {
+            Text(label)
+                .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(Color.primary)
-                .frame(width: 170, alignment: .leading)
+                .frame(width: 130, alignment: .trailing)
 
             Button {
                 isEnabled.wrappedValue.toggle()
@@ -717,26 +782,72 @@ struct ShortcutsTabCloneView: View {
     }
 }
 
-struct SupportTabCloneView: View {
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text("Get in touch for any feedback, bug reports, or feature requests!")
-                .font(.system(size: 13, weight: .regular))
-                .foregroundStyle(Color.primary)
-                .lineSpacing(3)
-                .padding(.top, 24)
+final class SupportTabViewState: ObservableObject {
+    @Published var isContactHovered = false
+}
 
-            Button("GitHub Issues") {
-                if let url = URL(string: "https://github.com/kiron0/killx/issues") {
-                    NSWorkspace.shared.open(url)
+struct SupportTabCloneView: View {
+    @StateObject private var viewState = SupportTabViewState()
+
+    var body: some View {
+        VStack(spacing: 14) {
+            HStack(spacing: 11) {
+                Image(systemName: "envelope.badge.fill")
+                    .font(.system(size: 14))
+                    .foregroundStyle(QuitXTheme.accent)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Questions, feedback or ideas?")
+                        .font(.system(size: 11.5, weight: .medium))
+                        .foregroundStyle(Color.primary)
+
+                    Text("We'd love to hear from you. Get in touch or submit an issue.")
+                        .font(.system(size: 10.5))
+                        .foregroundStyle(Color.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+
+                Spacer(minLength: 8)
+
+                Button {
+                    if let url = URL(string: "https://github.com/kiron0/killx/issues") {
+                        NSWorkspace.shared.open(url)
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Issues")
+                            .font(.system(size: 11, weight: .semibold))
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 8.5, weight: .bold))
+                    }
+                    .foregroundStyle(viewState.isContactHovered ? QuitXTheme.accent : Color.primary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(viewState.isContactHovered ? QuitXTheme.accent.opacity(0.14) : Color.primary.opacity(0.06))
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(viewState.isContactHovered ? QuitXTheme.accent.opacity(0.35) : Color.primary.opacity(0.1), lineWidth: 0.5)
+                    )
+                }
+                .buttonStyle(.plain)
+                .onHover { viewState.isContactHovered = $0 }
             }
-            .font(.system(size: 12))
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(QuitXTheme.cardBackground, in: RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.primary.opacity(0.09), lineWidth: 0.5)
+            )
 
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 28)
-        .frame(width: 480, height: 139, alignment: .topLeading)
+        .padding(.horizontal, 24)
+        .padding(.top, 18)
+        .frame(width: 480, height: 110, alignment: .topLeading)
     }
 }
 
@@ -745,9 +856,9 @@ struct AboutTabCloneView: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 20) {
-            KillXAppIconView(size: 70, cornerRadius: 14)
+            KillXAppIconView(size: 64, cornerRadius: 14)
 
-            VStack(alignment: .leading, spacing: 5) {
+            VStack(alignment: .leading, spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text("KillX")
                         .font(.system(size: 14, weight: .bold))
@@ -777,6 +888,6 @@ struct AboutTabCloneView: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 30)
-        .frame(width: 480, height: 130)
+        .frame(width: 480, height: 115)
     }
 }

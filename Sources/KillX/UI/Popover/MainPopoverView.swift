@@ -379,9 +379,7 @@ struct MainPopoverView: View {
             systemSymbolName: "questionmark.circle",
             action: {
                 StatusItemController.shared?.closePopover()
-                if let url = URL(string: "https://killx.js.org") {
-                    NSWorkspace.shared.open(url)
-                }
+                HelpWindowController.shared.show()
             }
         ))
 

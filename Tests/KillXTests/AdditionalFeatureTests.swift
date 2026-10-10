@@ -34,13 +34,13 @@ struct SettingsTabTests {
     @Test("SettingsTab content heights")
     func testSettingsTabContentHeights() {
         if #available(macOS 26.0, *) {
-            #expect(SettingsTab.general.contentHeight == 370)
+            #expect(SettingsTab.general.contentHeight == 320)
         } else {
-            #expect(SettingsTab.general.contentHeight == 340)
+            #expect(SettingsTab.general.contentHeight == 290)
         }
-        #expect(SettingsTab.shortcuts.contentHeight == 215)
-        #expect(SettingsTab.support.contentHeight == 139)
-        #expect(SettingsTab.about.contentHeight == 130)
+        #expect(SettingsTab.shortcuts.contentHeight == 221)
+        #expect(SettingsTab.support.contentHeight == 110)
+        #expect(SettingsTab.about.contentHeight == 115)
     }
 
     @Test("SettingsTab toolbar images generated and template")
