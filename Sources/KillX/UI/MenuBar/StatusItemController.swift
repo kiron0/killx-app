@@ -4,7 +4,7 @@ import SwiftUI
 @MainActor
 final class StatusItemController: NSObject {
     static weak var shared: StatusItemController?
-    static let popoverWidth: CGFloat = 295
+    static let popoverWidth: CGFloat = 320
 
     private var statusItem: NSStatusItem
     private var window: ArrowPopoverWindow?
