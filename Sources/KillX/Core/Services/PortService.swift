@@ -491,16 +491,33 @@ public final class PortService {
     public static func isIDEOrEditor(_ name: String, command: String = "") -> Bool {
         let lowerName = name.lowercased()
         let lowerCmd = command.lowercased()
-        let patterns = [
-            "antigravity", "cursor", "vscode", "code", "electron", "zed", "xcode",
-            "sublime_text", "idea", "pycharm", "webstorm", "goland", "clion",
-            "phpstorm", "rider", "rubymine", "fleet", "eclipse", "atom", "ptyhost"
+
+        // Exact process-name matches for known IDE executables
+        let exactNames: Set<String> = [
+            "zed", "xcode", "sublime_text", "idea", "pycharm", "webstorm",
+            "goland", "clion", "phpstorm", "rider", "rubymine", "fleet",
+            "eclipse", "atom", "ptyhost", "cursor", "windsurf"
         ]
-        for pattern in patterns {
-            if lowerName.contains(pattern) || lowerCmd.contains(pattern) {
-                return true
-            }
+        if exactNames.contains(lowerName) { return true }
+
+        // Prefix/substring matches safe enough to avoid false positives
+        let namePrefixes = ["antigravity", "vscode", "code helper"]
+        for prefix in namePrefixes {
+            if lowerName.hasPrefix(prefix) { return true }
         }
+
+        // Electron = host boundary only when the command path is inside a known IDE .app bundle
+        // Standalone user Electron apps (Slack, Discord, Figma) are NOT treated as boundaries.
+        let ideBundlePaths = [
+            "antigravity ide.app", "cursor.app", "visual studio code.app", "code.app",
+            "zed.app", "windsurf.app", "fleet.app", "webstorm.app", "pycharm.app",
+            "goland.app", "clion.app", "phpstorm.app", "rider.app", "rubymine.app",
+            "idea.app", "xcode.app"
+        ]
+        for bundlePath in ideBundlePaths {
+            if lowerCmd.contains(bundlePath) { return true }
+        }
+
         return false
     }
 
