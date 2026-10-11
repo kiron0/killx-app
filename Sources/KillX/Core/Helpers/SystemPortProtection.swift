@@ -29,7 +29,8 @@ public enum SystemPortProtection {
         "dev.zed.Zed",
         "com.apple.dt.Xcode",
         "com.sublimetext.4",
-        "com.sublimetext.3"
+        "com.sublimetext.3",
+        "ai.opencode.desktop"
     ]
 
     public static let criticalSystemProcesses: Set<String> = [
@@ -60,7 +61,8 @@ public enum SystemPortProtection {
         "code helper",
         "language_server_macos_arm",
         "language_server",
-        "ptyhost"
+        "ptyhost",
+        "opencode"
     ]
 
     public static let supportedKillXBundleIds: Set<String> = [
@@ -90,6 +92,7 @@ public enum SystemPortProtection {
             if criticalIDEBundleIds.contains(bid) ||
                bid.contains("antigravity") ||
                bid.contains("vscode") ||
+               bid.contains("opencode") ||
                bid.hasPrefix("com.jetbrains.") {
                 return true
             }
@@ -101,7 +104,7 @@ public enum SystemPortProtection {
             if criticalSystemProcesses.contains(lowerName) {
                 return true
             }
-            if lowerName.hasPrefix("antigravity") || lowerName.hasPrefix("code helper") {
+            if lowerName.hasPrefix("antigravity") || lowerName.hasPrefix("code helper") || lowerName.contains("opencode") {
                 return true
             }
         }
@@ -125,6 +128,8 @@ public enum SystemPortProtection {
                lowerPath.contains("cursor.app") ||
                lowerPath.contains("windsurf.app") ||
                lowerPath.contains("xcode.app") ||
+               lowerPath.contains("opencode.app") ||
+               lowerPath.contains("/.opencode/") ||
                lowerPath.contains("language_server_macos_arm") {
                 return true
             }
