@@ -8,8 +8,8 @@ on:
 
 jobs:
   build-and-test:
-    name: Build & Test (macOS 14)
-    runs-on: macos-14
+    name: Build & Test (macOS 26)
+    runs-on: macos-26
 
     steps:
       - name: Checkout Code
@@ -17,7 +17,10 @@ jobs:
 
       - name: Select Xcode Version
         run: |
-          XCODE_APP=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n 1)
+          XCODE_APP=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$XCODE_APP" ]; then
+            XCODE_APP=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n 1)
+          fi
           if [ -z "$XCODE_APP" ]; then
             XCODE_APP="/Applications/Xcode.app"
           fi
@@ -30,10 +33,7 @@ jobs:
           uname -a
 
       - name: Run Tests
-        run: swift test
+        run: swift test || swift test --build-system native
 
-      - name: Build Release Binary
-        run: swift build -c release
-
-      - name: Package .app Bundle
-        run: make bundle
+      - name: Build & Package .app Bundle
+        run: ./Scripts/build.sh

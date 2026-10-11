@@ -1,10 +1,6 @@
 name: Release
 
 on:
-  workflow_run:
-    workflows: ["CI"]
-    types: [completed]
-    branches: [main]
   push:
     tags:
       - 'v*'
@@ -14,45 +10,33 @@ permissions:
   contents: write
 
 concurrency:
-  group: release-${{ github.event.workflow_run.head_branch || github.ref_name }}
+  group: release-${{ github.ref_name }}
   cancel-in-progress: false
 
 jobs:
   release:
     name: Build & Publish Release
-    runs-on: macos-14
-    if: >-
-      ${{
-        github.event_name == 'workflow_dispatch' ||
-        github.event_name == 'push' ||
-        github.event.workflow_run.conclusion == 'success'
-      }}
-
+    runs-on: macos-26
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          ref: ${{ github.sha }}
 
       - name: Resolve Version & Tag
         id: meta
         shell: bash
         run: |
-          if [ "${{ github.event_name }}" = "workflow_run" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             VERSION=$(cat package.json | grep '"version"' | head -1 | awk -F: '{ print $2 }' | sed 's/[", ]//g')
             TAG="v$VERSION"
             echo "tag=$TAG" >> "$GITHUB_OUTPUT"
             echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
             if git rev-parse "$TAG" >/dev/null 2>&1 || git ls-remote --exit-code --tags origin "refs/tags/$TAG" >/dev/null 2>&1; then
-              echo "Tag $TAG already exists on remote."
-            else
-              echo "Creating tag $TAG..."
-              git config user.name "github-actions[bot]"
-              git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-              git tag "$TAG"
-              git push origin "refs/tags/$TAG"
+              echo "Tag $TAG already exists. Bump package.json before a manual release." >&2
+              exit 1
             fi
           else
             TAG="${GITHUB_REF_NAME:-v1.0.0}"
@@ -60,17 +44,29 @@ jobs:
             echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
           fi
 
+          PACKAGE_VERSION=$(awk -F'"' '/"version"/ { print $4; exit }' package.json)
+          if [ "${TAG#v}" != "$PACKAGE_VERSION" ]; then
+            echo "Tag version ${TAG#v} does not match package.json version $PACKAGE_VERSION." >&2
+            exit 1
+          fi
+
       - name: Select Xcode Version
         run: |
-          XCODE_APP=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n 1)
+          XCODE_APP=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$XCODE_APP" ]; then
+            XCODE_APP=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n 1)
+          fi
           if [ -z "$XCODE_APP" ]; then
             XCODE_APP="/Applications/Xcode.app"
           fi
           echo "Selected: $XCODE_APP"
           sudo xcode-select -s "$XCODE_APP/Contents/Developer"
 
+      - name: Run Tests
+        run: swift test || swift test --build-system native
+
       - name: Build and Bundle App
-        run: make bundle
+        run: ./Scripts/build.sh
 
       - name: Create DMG Installer
         run: |
@@ -82,6 +78,12 @@ jobs:
           cp -R .build/KillX.app "$DMG_STAGE/"
           ln -s /Applications "$DMG_STAGE/Applications"
           hdiutil create -volname "KillX" -srcfolder "$DMG_STAGE" -ov -format UDZO ".build/KillX-${TAG}.dmg"
+
+      - name: Create ZIP Archive
+        run: |
+          TAG="${{ steps.meta.outputs.tag }}"
+          echo "Packaging KillX-${TAG}.zip..."
+          ditto -c -k --sequesterRsrc --keepParent .build/KillX.app ".build/KillX-${TAG}.zip"
 
       - name: Write release notes
         shell: bash
@@ -108,8 +110,8 @@ jobs:
 
           ## Install
 
-          1. Download \`KillX-${{ steps.meta.outputs.tag }}.dmg\` from Assets below.
-          2. Open the disk image and drag **KillX** to your \`/Applications\` folder.
+          1. Download \`KillX-${{ steps.meta.outputs.tag }}.dmg\` (or \`.zip\`) from Assets below.
+          2. Open the disk image and drag **KillX** to your \`/Applications\` folder. The zip contains the same app if you prefer archives.
 
           **Full changelog:** https://github.com/${{ github.repository }}/commits/${{ steps.meta.outputs.tag }}
           EOF
@@ -118,9 +120,12 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           name: ${{ steps.meta.outputs.tag }}
           body_path: release-notes.md
-          files: .build/KillX-*.dmg
+          files: |
+            .build/KillX-*.dmg
+            .build/KillX-*.zip
+          fail_on_unmatched_files: false
           draft: false
           prerelease: false
-
