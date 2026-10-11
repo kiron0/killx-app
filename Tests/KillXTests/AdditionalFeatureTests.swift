@@ -8,11 +8,10 @@ struct SettingsTabTests {
     @Test("SettingsTab all cases")
     func testSettingsTabCases() {
         let all = SettingsTab.allCases
-        #expect(all.count == 5)
+        #expect(all.count == 4)
         #expect(all.contains(.general))
         #expect(all.contains(.exclude))
         #expect(all.contains(.shortcuts))
-        #expect(all.contains(.support))
         #expect(all.contains(.about))
     }
 
@@ -21,7 +20,6 @@ struct SettingsTabTests {
         #expect(SettingsTab.general.toolbarItemIdentifier.rawValue == "General")
         #expect(SettingsTab.exclude.toolbarItemIdentifier.rawValue == "Exclude")
         #expect(SettingsTab.shortcuts.toolbarItemIdentifier.rawValue == "Shortcuts")
-        #expect(SettingsTab.support.toolbarItemIdentifier.rawValue == "Support")
         #expect(SettingsTab.about.toolbarItemIdentifier.rawValue == "About")
     }
 
@@ -30,7 +28,6 @@ struct SettingsTabTests {
         #expect(SettingsTab.general.iconName == "preferences-general")
         #expect(SettingsTab.exclude.iconName == "preferences-exclude")
         #expect(SettingsTab.shortcuts.iconName == "preferences-shortcuts")
-        #expect(SettingsTab.support.iconName == "preferences-support")
         #expect(SettingsTab.about.iconName == "preferences-about")
     }
 
@@ -43,8 +40,18 @@ struct SettingsTabTests {
         }
         #expect(SettingsTab.exclude.contentHeight == 306)
         #expect(SettingsTab.shortcuts.contentHeight == 221)
-        #expect(SettingsTab.support.contentHeight == 110)
-        #expect(SettingsTab.about.contentHeight == 115)
+        #expect(SettingsTab.about.contentHeight == 186)
+    }
+
+    @Test("SettingsTab URLs")
+    func testSettingsTabURLs() {
+        let sayHi = KillXConstants.sayHiURL()
+        #expect(sayHi != nil)
+        #expect(sayHi?.scheme == "mailto")
+
+        let contact = KillXConstants.contactURL()
+        #expect(contact != nil)
+        #expect(contact?.scheme == "mailto")
     }
 
     @Test("SettingsTab toolbar images generated and template")

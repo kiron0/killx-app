@@ -6,7 +6,6 @@ enum SettingsTab: String, CaseIterable {
     case general = "General"
     case exclude = "Exclude"
     case shortcuts = "Shortcuts"
-    case support = "Support"
     case about = "About"
 
     var toolbarItemIdentifier: NSToolbarItem.Identifier {
@@ -18,7 +17,6 @@ enum SettingsTab: String, CaseIterable {
         case .general:   return "preferences-general"
         case .exclude:   return "preferences-exclude"
         case .shortcuts: return "preferences-shortcuts"
-        case .support:   return "preferences-support"
         case .about:     return "preferences-about"
         }
     }
@@ -28,7 +26,6 @@ enum SettingsTab: String, CaseIterable {
         case .general:   return "gearshape"
         case .exclude:   return "nosign"
         case .shortcuts: return "command"
-        case .support:   return "bubble.left.and.bubble.right"
         case .about:     return "bolt.horizontal.fill"
         }
     }
@@ -54,8 +51,7 @@ enum SettingsTab: String, CaseIterable {
             return 290
         case .exclude:   return 306
         case .shortcuts: return 221
-        case .support:   return 110
-        case .about:     return 115
+        case .about:     return 186
         }
     }
 }
@@ -253,8 +249,6 @@ struct SettingsContainerView: View {
                     .environmentObject(configStore)
             case .shortcuts:
                 ShortcutsTabCloneView()
-            case .support:
-                SupportTabCloneView()
             case .about:
                 AboutTabCloneView()
             }
@@ -790,15 +784,57 @@ struct ShortcutsTabCloneView: View {
     }
 }
 
-final class SupportTabViewState: ObservableObject {
+private final class AboutTabState: ObservableObject {
     @Published var isContactHovered = false
 }
 
-struct SupportTabCloneView: View {
-    @StateObject private var viewState = SupportTabViewState()
+struct AboutTabCloneView: View {
+    @ObservedObject private var updateChecker = UpdateChecker.shared
+    @StateObject private var state = AboutTabState()
 
     var body: some View {
         VStack(spacing: 14) {
+            HStack(alignment: .center, spacing: 20) {
+                KillXAppIconView(size: 70, cornerRadius: 14)
+
+                VStack(alignment: .leading, spacing: 5) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text(KillXConstants.appName)
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(Color.primary)
+
+                        Text("⚡️ Version \(updateChecker.currentVersion)")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.secondary)
+                    }
+
+                    Text(KillXConstants.copyright)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.secondary)
+
+                    HStack(spacing: 10) {
+                        Button("Say hi 👋") {
+                            if let url = KillXConstants.sayHiURL() {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+                        .font(.system(size: 11.5))
+
+                        Button(updateChecker.isChecking ? "Checking..." : "Check Updates") {
+                            Task {
+                                await updateChecker.checkForUpdates(isUserInitiated: true)
+                            }
+                        }
+                        .disabled(updateChecker.isChecking)
+                        .font(.system(size: 11.5))
+                    }
+                    .padding(.top, 4)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 30)
+
             HStack(spacing: 11) {
                 Image(systemName: "envelope.badge.fill")
                     .font(.system(size: 14))
@@ -809,7 +845,7 @@ struct SupportTabCloneView: View {
                         .font(.system(size: 11.5, weight: .medium))
                         .foregroundStyle(Color.primary)
 
-                    Text("We'd love to hear from you. Get in touch or submit an issue.")
+                    Text("We'd love to hear from you. Get in touch with us.")
                         .font(.system(size: 10.5))
                         .foregroundStyle(Color.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -818,30 +854,30 @@ struct SupportTabCloneView: View {
                 Spacer(minLength: 8)
 
                 Button {
-                    if let url = URL(string: "https://github.com/kiron0/killx-app/issues") {
+                    if let url = KillXConstants.contactURL() {
                         NSWorkspace.shared.open(url)
                     }
                 } label: {
                     HStack(spacing: 4) {
-                        Text("Issues")
+                        Text("Contact")
                             .font(.system(size: 11, weight: .semibold))
                         Image(systemName: "arrow.up.right")
                             .font(.system(size: 8.5, weight: .bold))
                     }
-                    .foregroundStyle(viewState.isContactHovered ? KillXTheme.accent : Color.primary)
+                    .foregroundStyle(state.isContactHovered ? KillXTheme.accent : Color.primary)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(
                         RoundedRectangle(cornerRadius: 6)
-                            .fill(viewState.isContactHovered ? KillXTheme.accent.opacity(0.14) : Color.primary.opacity(0.06))
+                            .fill(state.isContactHovered ? KillXTheme.accent.opacity(0.14) : Color.primary.opacity(0.06))
                     )
                     .overlay(
                         RoundedRectangle(cornerRadius: 6)
-                            .stroke(viewState.isContactHovered ? KillXTheme.accent.opacity(0.35) : Color.primary.opacity(0.1), lineWidth: 0.5)
+                            .stroke(state.isContactHovered ? KillXTheme.accent.opacity(0.35) : Color.primary.opacity(0.1), lineWidth: 0.5)
                     )
                 }
                 .buttonStyle(.plain)
-                .onHover { viewState.isContactHovered = $0 }
+                .onHover { state.isContactHovered = $0 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -850,52 +886,11 @@ struct SupportTabCloneView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .stroke(Color.primary.opacity(0.09), lineWidth: 0.5)
             )
-
-            Spacer(minLength: 0)
+            .padding(.horizontal, 20)
         }
-        .padding(.horizontal, 24)
-        .padding(.top, 18)
-        .frame(width: 480, height: 110, alignment: .topLeading)
-    }
-}
-
-struct AboutTabCloneView: View {
-    @ObservedObject private var updateChecker = UpdateChecker.shared
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 20) {
-            KillXAppIconView(size: 64, cornerRadius: 14)
-
-            VStack(alignment: .leading, spacing: 4) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("KillX")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Color.primary)
-
-                    Text("⚡️ Version \(updateChecker.currentVersion)")
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.secondary)
-                }
-
-                Text("Copyright © 2026 Toufiq Hasan Kiron")
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.secondary)
-
-                HStack(spacing: 10) {
-                    Button(updateChecker.isChecking ? "Checking..." : "Check Updates") {
-                        Task {
-                            await updateChecker.checkForUpdates(isUserInitiated: true)
-                        }
-                    }
-                    .disabled(updateChecker.isChecking)
-                    .font(.system(size: 11.5))
-                }
-                .padding(.top, 4)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 30)
-        .frame(width: 480, height: 115)
+        .padding(.top, 16)
+        .padding(.bottom, 14)
+        .frame(width: 480, height: 186, alignment: .topLeading)
+        .background(KillXTheme.paneBackground)
     }
 }
