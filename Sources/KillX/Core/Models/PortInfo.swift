@@ -64,6 +64,7 @@ public struct PortInfo: Identifiable, Hashable {
     public let cwd: String?
     public let docker: DockerInfo?
     public let isDevServer: Bool
+    public let isSystemProtected: Bool
 
     public var displayAppName: String {
         if let appName, !appName.isEmpty {
@@ -101,7 +102,8 @@ public struct PortInfo: Identifiable, Hashable {
         cpuUsage: Double = 0.0,
         cwd: String? = nil,
         docker: DockerInfo? = nil,
-        isDevServer: Bool = false
+        isDevServer: Bool = false,
+        isSystemProtected: Bool = false
     ) {
         self.port = port
         self.pid = pid
@@ -117,5 +119,6 @@ public struct PortInfo: Identifiable, Hashable {
         self.cwd = cwd
         self.docker = docker
         self.isDevServer = isDevServer
+        self.isSystemProtected = isSystemProtected
     }
 }

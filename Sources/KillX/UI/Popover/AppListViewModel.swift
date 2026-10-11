@@ -84,7 +84,7 @@ final class AppListViewModel: ObservableObject {
     }
 
     var filteredPorts: [PortInfo] {
-        var list = ports
+        var list = ports.filter { !$0.isSystemProtected }
         let excluded = Set(configStore.config.excludePorts)
         list = list.filter { !excluded.contains($0.port) }
 
@@ -125,7 +125,7 @@ final class AppListViewModel: ObservableObject {
     }
 
     func toggleSelectAll() {
-        let visibleIds = Set(filteredPorts.map(\.id))
+        let visibleIds = Set(filteredPorts.filter { !$0.isSystemProtected }.map(\.id))
         if visibleIds.isSubset(of: selectedPorts) {
             selectedPorts.subtract(visibleIds)
         } else {
@@ -134,6 +134,7 @@ final class AppListViewModel: ObservableObject {
     }
 
     func toggleSelection(for port: PortInfo) {
+        guard !port.isSystemProtected else { return }
         if selectedPorts.contains(port.id) {
             selectedPorts.remove(port.id)
         } else {
@@ -181,6 +182,11 @@ final class AppListViewModel: ObservableObject {
     }
 
     func confirmAndKillPort(_ port: PortInfo, force: Bool = false, tree: Bool = false) {
+        guard !port.isSystemProtected else {
+            showToastMessage("Port is protected by system", isError: true)
+            return
+        }
+
         let isForced = force || isOptionKeyPressed || configStore.config.force == .force
         let useTree = tree || configStore.config.treeKillByDefault
 
@@ -227,7 +233,7 @@ final class AppListViewModel: ObservableObject {
     }
 
     func confirmAndKillSelectedPorts(force: Bool = false, tree: Bool = false) {
-        let targets = ports.filter { selectedPorts.contains($0.id) }
+        let targets = ports.filter { selectedPorts.contains($0.id) && !$0.isSystemProtected }
         guard !targets.isEmpty else { return }
 
         let isForced = force || isOptionKeyPressed || configStore.config.force == .force
@@ -346,6 +352,10 @@ final class AppListViewModel: ObservableObject {
     }
 
     func killPort(_ port: PortInfo, force: Bool = false, tree: Bool = false) async {
+        guard !port.isSystemProtected else {
+            showToastMessage("Port is protected by system", isError: true)
+            return
+        }
         let ok = await PortService.shared.killPort(port, force: force, tree: tree)
         if ok {
             SoundService.playKillSingle()
@@ -355,7 +365,7 @@ final class AppListViewModel: ObservableObject {
     }
 
     func killSelectedPorts(force: Bool = false, tree: Bool = false) async {
-        let targets = ports.filter { selectedPorts.contains($0.id) }
+        let targets = ports.filter { selectedPorts.contains($0.id) && !$0.isSystemProtected }
         guard !targets.isEmpty else { return }
         let count = await PortService.shared.killMultiplePorts(targets, force: force, tree: tree)
         if count > 0 {

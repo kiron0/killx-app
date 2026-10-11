@@ -29,6 +29,7 @@ struct PortRowView: View {
         HStack(spacing: 6) {
 
             KillXSelectionCheckbox(isSelected: isSelected)
+                .opacity(port.isSystemProtected ? 0.3 : 1)
 
             AppIconView(bundleId: port.appBundleId, pid: port.pid, size: 18, cornerRadius: 3.5)
 
@@ -96,14 +97,23 @@ struct PortRowView: View {
             .layoutPriority(2)
 
             Button {
-                vm.confirmAndKillPort(port, force: isForced, tree: false)
+                if !port.isSystemProtected {
+                    vm.confirmAndKillPort(port, force: isForced, tree: false)
+                }
             } label: {
-                quitButtonIcon(isForced: isForced)
+                if port.isSystemProtected {
+                    Image(systemName: "lock.shield")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.secondary)
+                        .frame(width: 18, height: 18)
+                } else {
+                    quitButtonIcon(isForced: isForced)
+                }
             }
             .buttonStyle(.plain)
-            .disabled(isPending)
-            .help(isPending ? "Operation in progress" : (isForced ? "Force kill :\(port.port) (SIGKILL)" : "Kill :\(port.port) (SIGTERM)"))
-            .accessibilityLabel("Kill :\(port.port)")
+            .disabled(isPending || port.isSystemProtected)
+            .help(port.isSystemProtected ? "System protected port" : (isPending ? "Operation in progress" : (isForced ? "Force kill :\(port.port) (SIGKILL)" : "Kill :\(port.port) (SIGTERM)")))
+            .accessibilityLabel(port.isSystemProtected ? "System protected port" : "Kill :\(port.port)")
             .onHover { h in state.isQuitHovered = h }
             .layoutPriority(2)
         }
@@ -111,7 +121,7 @@ struct PortRowView: View {
         .padding(.vertical, 3.5)
         .contentShape(Rectangle())
         .onTapGesture {
-            if !isPending {
+            if !isPending && !port.isSystemProtected {
                 vm.toggleSelection(for: port)
             }
         }
@@ -204,27 +214,29 @@ struct PortRowView: View {
             ))
         }
 
-        menu.addItem(.separator())
+        if !port.isSystemProtected {
+            menu.addItem(.separator())
 
-        menu.addItem(MenuHelper.makeItem(
-            title: killTitle,
-            keyEquivalent: "k",
-            keyEquivalentModifierMask: killMask,
-            assetName: killAsset,
-            systemSymbolName: killSymbol,
-            action: {
-                vm.confirmAndKillPort(port, force: isForced, tree: false)
-            }
-        ))
+            menu.addItem(MenuHelper.makeItem(
+                title: killTitle,
+                keyEquivalent: "k",
+                keyEquivalentModifierMask: killMask,
+                assetName: killAsset,
+                systemSymbolName: killSymbol,
+                action: {
+                    vm.confirmAndKillPort(port, force: isForced, tree: false)
+                }
+            ))
 
-        let treeTitle = isForced ? "Force Tree Kill" : "Tree Kill (Process Tree)"
-        menu.addItem(MenuHelper.makeItem(
-            title: treeTitle,
-            systemSymbolName: "arrow.triangle.branch",
-            action: {
-                vm.confirmAndKillPort(port, force: isForced, tree: true)
-            }
-        ))
+            let treeTitle = isForced ? "Force Tree Kill" : "Tree Kill (Process Tree)"
+            menu.addItem(MenuHelper.makeItem(
+                title: treeTitle,
+                systemSymbolName: "arrow.triangle.branch",
+                action: {
+                    vm.confirmAndKillPort(port, force: isForced, tree: true)
+                }
+            ))
+        }
 
         menu.addItem(.separator())
 

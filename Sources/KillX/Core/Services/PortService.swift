@@ -24,7 +24,7 @@ public final class PortService {
         return false
     }
 
-    public func fetchListeningPorts() async -> [PortInfo] {
+    public func fetchListeningPorts(includeSystem: Bool = false) async -> [PortInfo] {
         guard let output = await runLsof() else { return [] }
         let parsed = parseLsofOutput(output)
         if parsed.isEmpty { return [] }
@@ -53,6 +53,18 @@ public final class PortService {
             let docker = dockerContainers.first(where: { $0.publishedPort == item.port })
             let appResolution = resolveApp(pid: item.pid, processName: item.process, command: cmd, docker: docker, allProcs: allProcs)
 
+            let isProtected = SystemPortProtection.isSystemProtected(
+                pid: item.pid,
+                processName: item.process,
+                bundleIdentifier: appResolution.bundleId,
+                executablePath: appResolution.executablePath,
+                isDevServer: isDev
+            )
+
+            if !includeSystem && isProtected {
+                continue
+            }
+
             results.append(PortInfo(
                 port: item.port,
                 pid: item.pid,
@@ -67,7 +79,8 @@ public final class PortService {
                 cpuUsage: cpu,
                 cwd: cwd,
                 docker: docker,
-                isDevServer: isDev
+                isDevServer: isDev,
+                isSystemProtected: isProtected
             ))
         }
 
@@ -82,6 +95,10 @@ public final class PortService {
 
     @discardableResult
     public func killPort(_ port: PortInfo, force: Bool = false, tree: Bool = false) async -> Bool {
+        if port.isSystemProtected || SystemPortProtection.isSystemProtected(port: port) {
+            return false
+        }
+
         if let docker = port.docker {
             return await DockerService.shared.stopContainer(containerId: docker.containerId, force: force)
         }
@@ -94,7 +111,6 @@ public final class PortService {
         let res = Darwin.kill(port.pid, sig)
         if res == 0 {
             if !force {
-
                 for _ in 0..<10 {
                     try? await Task.sleep(nanoseconds: 100_000_000)
                     if Darwin.kill(port.pid, 0) != 0 { return true }
@@ -167,14 +183,24 @@ public final class PortService {
     @discardableResult
     public func terminateProcessTree(pid: pid_t, force: Bool = false) async -> Bool {
         guard pid > 1, pid != ProcessInfo.processInfo.processIdentifier else { return false }
+        if SystemPortProtection.isSystemProtected(pid: pid) {
+            return false
+        }
 
         let allProcs = await fetchAllProcesses()
         let ancestry = await traceProcessTree(pid: pid)
 
         let rootPid = getSupervisorRootPid(ancestry: ancestry) ?? pid
+        if SystemPortProtection.isSystemProtected(pid: rootPid) {
+            return false
+        }
         let descendants = getAllDescendantPids(rootPid: rootPid, procs: allProcs)
         var allPids = [rootPid] + descendants
-        allPids = allPids.filter { $0 > 1 && $0 != ProcessInfo.processInfo.processIdentifier }
+        allPids = allPids.filter {
+            $0 > 1 &&
+            $0 != ProcessInfo.processInfo.processIdentifier &&
+            !SystemPortProtection.isSystemProtected(pid: $0)
+        }
 
         let reversed = Array(allPids.reversed())
         let sig = force ? SIGKILL : SIGTERM
@@ -484,10 +510,12 @@ public final class PortService {
     public struct AppResolution: Sendable {
         public let appName: String
         public let bundleId: String?
+        public let executablePath: String?
 
-        public init(appName: String, bundleId: String? = nil) {
+        public init(appName: String, bundleId: String? = nil, executablePath: String? = nil) {
             self.appName = appName
             self.bundleId = bundleId
+            self.executablePath = executablePath
         }
     }
 
@@ -498,15 +526,21 @@ public final class PortService {
         docker: DockerInfo? = nil,
         allProcs: [pid_t: RawProcessItem]? = nil
     ) -> AppResolution {
+        var execPath: String? = nil
+        var buffer = [CChar](repeating: 0, count: 4096)
+        let ret = proc_pidpath(pid, &buffer, UInt32(buffer.count))
+        if ret > 0 {
+            execPath = String(cString: buffer)
+        }
 
         if let docker {
             let name = docker.name.isEmpty ? "Docker" : "Docker (\(docker.name))"
-            return AppResolution(appName: name, bundleId: "com.docker.docker")
+            return AppResolution(appName: name, bundleId: "com.docker.docker", executablePath: execPath)
         }
 
         if let running = NSRunningApplication(processIdentifier: pid),
            let name = running.localizedName, !name.isEmpty {
-            return AppResolution(appName: name, bundleId: running.bundleIdentifier)
+            return AppResolution(appName: name, bundleId: running.bundleIdentifier, executablePath: execPath ?? running.executableURL?.path)
         }
 
         if let app = appFromProcPath(pid: pid) {
@@ -524,7 +558,7 @@ public final class PortService {
 
                 if let running = NSRunningApplication(processIdentifier: parentPid),
                    let name = running.localizedName, !name.isEmpty {
-                    return AppResolution(appName: name, bundleId: running.bundleIdentifier)
+                    return AppResolution(appName: name, bundleId: running.bundleIdentifier, executablePath: execPath ?? running.executableURL?.path)
                 }
 
                 if let app = appFromProcPath(pid: parentPid) {
@@ -536,7 +570,7 @@ public final class PortService {
         }
 
         let cleanName = cleanRuntimeName(processName: processName, command: command)
-        return AppResolution(appName: cleanName, bundleId: nil)
+        return AppResolution(appName: cleanName, bundleId: nil, executablePath: execPath)
     }
 
     private func appFromProcPath(pid: pid_t) -> AppResolution? {
@@ -552,10 +586,10 @@ public final class PortService {
             let name = (bundle.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String)
                 ?? (bundle.object(forInfoDictionaryKey: "CFBundleName") as? String)
                 ?? URL(fileURLWithPath: appBundlePath).deletingPathExtension().lastPathComponent
-            return AppResolution(appName: name, bundleId: bundleId)
+            return AppResolution(appName: name, bundleId: bundleId, executablePath: path)
         }
         let fallbackName = URL(fileURLWithPath: appBundlePath).deletingPathExtension().lastPathComponent
-        return AppResolution(appName: fallbackName, bundleId: nil)
+        return AppResolution(appName: fallbackName, bundleId: nil, executablePath: path)
     }
 
     private func cleanRuntimeName(processName: String, command: String) -> String {

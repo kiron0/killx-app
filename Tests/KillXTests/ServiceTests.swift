@@ -123,3 +123,59 @@ struct SoundServiceTests {
         SoundService.playQuitAll()
     }
 }
+
+@Suite("SystemPortProtection Tests")
+struct SystemPortProtectionTests {
+    @Test("Critical daemon names are protected")
+    func testCriticalDaemons() {
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "rapportd"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "ControlCenter"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "mDNSResponder"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "launchd"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "killx"))
+        #expect(!SystemPortProtection.isSystemProtected(pid: 9999, processName: "node", isDevServer: true))
+    }
+
+    @Test("Critical bundle identifiers and self are protected")
+    func testBundleIds() {
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, bundleIdentifier: "com.apple.controlcenter"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, bundleIdentifier: "com.apple.dock"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, bundleIdentifier: "io.coreify.killx"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, bundleIdentifier: "com.killx.app"))
+        #expect(!SystemPortProtection.isSystemProtected(pid: 9999, bundleIdentifier: "com.google.Chrome"))
+    }
+
+    @Test("Protected path prefixes")
+    func testProtectedPaths() {
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, executablePath: "/System/Library/CoreServices/ControlCenter.app/Contents/MacOS/ControlCenter"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, executablePath: "/usr/libexec/rapportd"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, executablePath: "/usr/sbin/mDNSResponder"))
+        #expect(!SystemPortProtection.isSystemProtected(pid: 9999, executablePath: "/opt/homebrew/bin/node"))
+    }
+
+    @Test("Special PID protection")
+    func testSpecialPids() {
+        #expect(SystemPortProtection.isSystemProtected(pid: 0))
+        #expect(SystemPortProtection.isSystemProtected(pid: 1))
+        #expect(SystemPortProtection.isSystemProtected(pid: ProcessInfo.processInfo.processIdentifier))
+    }
+
+    @Test("PortInfo protection and kill rejection")
+    func testPortInfoKillRejection() async {
+        let protectedPort = PortInfo(
+            port: 5000,
+            pid: 9999,
+            processName: "ControlCenter",
+            appBundleId: "com.apple.controlcenter",
+            isSystemProtected: true
+        )
+        #expect(SystemPortProtection.isSystemProtected(port: protectedPort))
+
+        let killed = await PortService.shared.killPort(protectedPort)
+        #expect(!killed)
+
+        let killedTree = await PortService.shared.terminateProcessTree(pid: 1)
+        #expect(!killedTree)
+    }
+}
+

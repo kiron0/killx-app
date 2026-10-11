@@ -150,6 +150,10 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
                 KillXHelpSection(
                     title: "Protected operations",
                     body: "Excluded ports are never killed during batch kills or dev server sweeps, preventing accidental disruption of your environment."
+                ),
+                KillXHelpSection(
+                    title: "System protections",
+                    body: "macOS system daemons (rapportd, ControlCenter, mDNSResponder, launchd, /System/Library, /usr/libexec) and KillX itself are strictly protected and prevented from being listed or killed."
                 )
             ]
         ),
