@@ -278,14 +278,6 @@ final class StatusItemController: NSObject {
             }
         ))
 
-        menu.addItem(MenuHelper.makeItem(
-            title: "Welcome Guide",
-            systemSymbolName: "hand.wave",
-            action: {
-                WelcomeWindowController.shared.show()
-            }
-        ))
-
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(MenuHelper.makeItem(

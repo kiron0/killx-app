@@ -291,15 +291,6 @@ struct MainPopoverView: View {
         ))
 
         menu.addItem(MenuHelper.makeItem(
-            title: "Welcome Guide",
-            systemSymbolName: "hand.wave",
-            action: {
-                StatusItemController.shared?.closePopover()
-                WelcomeWindowController.shared.show()
-            }
-        ))
-
-        menu.addItem(MenuHelper.makeItem(
             title: "Help",
             keyEquivalent: "?",
             assetName: "settings-help",

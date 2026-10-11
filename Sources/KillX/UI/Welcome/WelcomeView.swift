@@ -37,8 +37,6 @@ struct WelcomeView: View {
                     .ignoresSafeArea()
             }
         }
-        .tint(accentColor)
-        .accentColor(accentColor)
     }
 
     private var quickSetup: some View {
@@ -154,7 +152,7 @@ private struct WelcomePrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(Color.black.opacity(0.88))
+            .foregroundStyle(Color.white)
             .frame(maxWidth: .infinity)
             .frame(height: 30)
             .background(color.opacity(configuration.isPressed ? 0.75 : 1))

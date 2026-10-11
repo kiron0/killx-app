@@ -85,8 +85,8 @@ func createAppIconImage(size: CGFloat) -> NSImage {
     // Subtle glow under the lightning bolt
     let glowCenter = CGPoint(x: size * 0.68, y: size * 0.30)
     let glowColors = [
-        NSColor(red: 244/255, green: 63/255, blue: 94/255, alpha: 0.40).cgColor,
-        NSColor(red: 244/255, green: 63/255, blue: 94/255, alpha: 0.0).cgColor
+        NSColor(red: 56/255, green: 189/255, blue: 248/255, alpha: 0.40).cgColor,
+        NSColor(red: 56/255, green: 189/255, blue: 248/255, alpha: 0.0).cgColor
     ] as CFArray
     let glowGrad = CGGradient(colorsSpace: colorSpace, colors: glowColors, locations: [0.0, 1.0])!
     ctx.drawRadialGradient(glowGrad, startCenter: glowCenter, startRadius: 0, endCenter: glowCenter, endRadius: size * 0.42, options: [])
@@ -123,12 +123,12 @@ func createAppIconImage(size: CGFloat) -> NSImage {
     ctx.addPath(arm)
     ctx.fillPath()
     
-    // Lightning bolt in Rose gradient (down-right)
-    let roseColors = [
-        NSColor(red: 251/255, green: 113/255, blue: 133/255, alpha: 1.0).cgColor,
-        NSColor(red: 244/255, green: 63/255, blue: 94/255, alpha: 1.0).cgColor
+    // Lightning bolt in Sky gradient (down-right)
+    let skyColors = [
+        NSColor(red: 125/255, green: 211/255, blue: 252/255, alpha: 1.0).cgColor,
+        NSColor(red: 56/255, green: 189/255, blue: 248/255, alpha: 1.0).cgColor
     ] as CFArray
-    let roseGrad = CGGradient(colorsSpace: colorSpace, colors: roseColors, locations: [0.0, 1.0])!
+    let skyGrad = CGGradient(colorsSpace: colorSpace, colors: skyColors, locations: [0.0, 1.0])!
     
     let bolt = CGMutablePath()
     bolt.move(to: CGPoint(x: size * 0.52, y: size * 0.44))
@@ -143,7 +143,7 @@ func createAppIconImage(size: CGFloat) -> NSImage {
     ctx.saveGState()
     ctx.addPath(bolt)
     ctx.clip()
-    ctx.drawLinearGradient(roseGrad, start: CGPoint(x: size * 0.52, y: size * 0.44), end: CGPoint(x: size * 0.82, y: botY), options: [])
+    ctx.drawLinearGradient(skyGrad, start: CGPoint(x: size * 0.52, y: size * 0.44), end: CGPoint(x: size * 0.82, y: botY), options: [])
     ctx.restoreGState()
     
     ctx.restoreGState()
@@ -167,14 +167,16 @@ func savePNG(image: NSImage, path: String) {
     }
 }
 
+let iconsDir = FileManager.default.fileExists(atPath: "Support/Icons") ? "Support/Icons" : (FileManager.default.fileExists(atPath: "app/Support/Icons") ? "app/Support/Icons" : ".")
+
 // 1. Generate menubar icons
 let mb1 = createMenubarImage(size: 18)
-savePNG(image: mb1, path: "app/Support/Icons/status-icon.png")
-savePNG(image: mb1, path: "app/Support/Icons/menubar.png")
+savePNG(image: mb1, path: "\(iconsDir)/status-icon.png")
+savePNG(image: mb1, path: "\(iconsDir)/menubar.png")
 
 let mb2 = createMenubarImage(size: 36)
-savePNG(image: mb2, path: "app/Support/Icons/status-icon@2x.png")
-savePNG(image: mb2, path: "app/Support/Icons/menubar@2x.png")
+savePNG(image: mb2, path: "\(iconsDir)/status-icon@2x.png")
+savePNG(image: mb2, path: "\(iconsDir)/menubar@2x.png")
 
 // 2. Generate app icons for iconset and root icons
 let sizes: [(String, CGFloat)] = [
@@ -207,12 +209,20 @@ let iconsetSizes: [(String, CGFloat)] = [
 
 for (name, size) in sizes {
     let img = createAppIconImage(size: size)
-    savePNG(image: img, path: "app/Support/Icons/\(name)")
+    savePNG(image: img, path: "\(iconsDir)/\(name)")
 }
 
 for (name, size) in iconsetSizes {
     let img = createAppIconImage(size: size)
-    savePNG(image: img, path: "app/Support/Icons/AppIcon.iconset/\(name)")
+    savePNG(image: img, path: "\(iconsDir)/AppIcon.iconset/\(name)")
 }
+
+let iconsetPath = "\(iconsDir)/AppIcon.iconset"
+let icnsPath = "\(iconsDir)/AppIcon.icns"
+let task = Process()
+task.executableURL = URL(fileURLWithPath: "/usr/bin/iconutil")
+task.arguments = ["-c", "icns", iconsetPath, "-o", icnsPath]
+try? task.run()
+task.waitUntilExit()
 
 print("Icon generation completed!")

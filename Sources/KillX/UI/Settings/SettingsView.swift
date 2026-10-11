@@ -273,8 +273,6 @@ struct SettingsContainerView: View {
                 KillXTheme.windowBackground
             }
         }
-        .tint(KillXTheme.accent)
-        .accentColor(KillXTheme.accent)
         .onChange(of: tabModel.activeTab) { _, _ in
             HelpPopoverState.closeAll()
             NotificationCenter.default.post(name: KillXConstants.Notifications.dismissSettingsTooltips, object: nil)
@@ -458,9 +456,6 @@ struct GeneralTabCloneView: View {
                         Text(sortOpt.rawValue).tag(sortOpt)
                     }
                 }
-                .tint(Color.primary)
-                .accentColor(Color.primary)
-                .foregroundStyle(Color.primary)
                 .frame(width: 175, alignment: .leading)
                 .labelsHidden()
             } help: {
@@ -475,9 +470,6 @@ struct GeneralTabCloneView: View {
                     Text("Graceful (SIGTERM)").tag("Graceful (SIGTERM)")
                     Text("Force (SIGKILL)").tag("Force (SIGKILL)")
                 }
-                .tint(Color.primary)
-                .accentColor(Color.primary)
-                .foregroundStyle(Color.primary)
                 .frame(width: 175, alignment: .leading)
                 .labelsHidden()
             } help: {

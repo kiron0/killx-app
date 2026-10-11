@@ -183,7 +183,7 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
                 ),
                 KillXHelpSection(
                     title: "Liquid Glass Mode",
-                    body: "On macOS 26+, choose Liquid Glass in Settings > General or the Welcome Guide for translucent blur effects and modern glass depth."
+                    body: "On macOS 26+, choose Liquid Glass in Settings > General for translucent blur effects and modern glass depth."
                 )
             ]
         ),
@@ -255,8 +255,6 @@ struct HelpView: View {
             }
         }
         .ignoresSafeArea()
-        .tint(KillXTheme.accent)
-        .accentColor(KillXTheme.accent)
         .onChange(of: state.searchText) {
             guard !filteredTopics.contains(where: { $0.id == state.selection }) else { return }
             state.selection = filteredTopics.first?.id
