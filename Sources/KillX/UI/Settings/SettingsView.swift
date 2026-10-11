@@ -4,6 +4,7 @@ import Combine
 
 enum SettingsTab: String, CaseIterable {
     case general = "General"
+    case exclude = "Exclude"
     case shortcuts = "Shortcuts"
     case support = "Support"
     case about = "About"
@@ -15,6 +16,7 @@ enum SettingsTab: String, CaseIterable {
     var iconName: String {
         switch self {
         case .general:   return "preferences-general"
+        case .exclude:   return "preferences-exclude"
         case .shortcuts: return "preferences-shortcuts"
         case .support:   return "preferences-support"
         case .about:     return "preferences-about"
@@ -24,6 +26,7 @@ enum SettingsTab: String, CaseIterable {
     var fallbackSymbolName: String {
         switch self {
         case .general:   return "gearshape"
+        case .exclude:   return "nosign"
         case .shortcuts: return "command"
         case .support:   return "bubble.left.and.bubble.right"
         case .about:     return "bolt.horizontal.fill"
@@ -49,6 +52,7 @@ enum SettingsTab: String, CaseIterable {
         case .general:
             if #available(macOS 26.0, *) { return 320 }
             return 290
+        case .exclude:   return 306
         case .shortcuts: return 221
         case .support:   return 110
         case .about:     return 115
@@ -243,6 +247,9 @@ struct SettingsContainerView: View {
             switch tabModel.activeTab {
             case .general:
                 GeneralTabCloneView()
+                    .environmentObject(configStore)
+            case .exclude:
+                ExcludeTabView()
                     .environmentObject(configStore)
             case .shortcuts:
                 ShortcutsTabCloneView()

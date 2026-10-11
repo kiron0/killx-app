@@ -8,8 +8,9 @@ struct SettingsTabTests {
     @Test("SettingsTab all cases")
     func testSettingsTabCases() {
         let all = SettingsTab.allCases
-        #expect(all.count == 4)
+        #expect(all.count == 5)
         #expect(all.contains(.general))
+        #expect(all.contains(.exclude))
         #expect(all.contains(.shortcuts))
         #expect(all.contains(.support))
         #expect(all.contains(.about))
@@ -18,6 +19,7 @@ struct SettingsTabTests {
     @Test("SettingsTab toolbar item identifiers")
     func testSettingsTabToolbarItemIdentifier() {
         #expect(SettingsTab.general.toolbarItemIdentifier.rawValue == "General")
+        #expect(SettingsTab.exclude.toolbarItemIdentifier.rawValue == "Exclude")
         #expect(SettingsTab.shortcuts.toolbarItemIdentifier.rawValue == "Shortcuts")
         #expect(SettingsTab.support.toolbarItemIdentifier.rawValue == "Support")
         #expect(SettingsTab.about.toolbarItemIdentifier.rawValue == "About")
@@ -26,6 +28,7 @@ struct SettingsTabTests {
     @Test("SettingsTab icon names")
     func testSettingsTabIconNames() {
         #expect(SettingsTab.general.iconName == "preferences-general")
+        #expect(SettingsTab.exclude.iconName == "preferences-exclude")
         #expect(SettingsTab.shortcuts.iconName == "preferences-shortcuts")
         #expect(SettingsTab.support.iconName == "preferences-support")
         #expect(SettingsTab.about.iconName == "preferences-about")
@@ -38,6 +41,7 @@ struct SettingsTabTests {
         } else {
             #expect(SettingsTab.general.contentHeight == 290)
         }
+        #expect(SettingsTab.exclude.contentHeight == 306)
         #expect(SettingsTab.shortcuts.contentHeight == 221)
         #expect(SettingsTab.support.contentHeight == 110)
         #expect(SettingsTab.about.contentHeight == 115)
@@ -51,6 +55,35 @@ struct SettingsTabTests {
             #expect(img?.isTemplate == true)
             #expect(img?.size == NSSize(width: 19, height: 19))
         }
+    }
+
+    @Test("ConfigStore add and remove excluded ports")
+    @MainActor
+    func testConfigStoreExcludePorts() {
+        let store = ConfigStore.shared
+        store.removeAllExcludedPorts()
+        #expect(store.config.excludePorts.isEmpty)
+
+        let added = store.addExcludedPorts([3000, 8080, 3000])
+        #expect(added == 2)
+        #expect(store.config.excludePorts == [3000, 8080])
+
+        store.removeExcludedPorts([3000])
+        #expect(store.config.excludePorts == [8080])
+
+        store.removeAllExcludedPorts()
+        #expect(store.config.excludePorts.isEmpty)
+    }
+
+    @Test("ExcludeRemovalRequest titles and messages")
+    func testExcludeRemovalRequest() {
+        let single = ExcludeRemovalRequest(ports: [3000], totalCount: 5)
+        #expect(single.title == "Remove Port :3000?")
+        #expect(single.removesAll == false)
+
+        let all = ExcludeRemovalRequest(ports: [3000, 8080], totalCount: 2)
+        #expect(all.title == "Remove all excluded ports?")
+        #expect(all.removesAll == true)
     }
 }
 

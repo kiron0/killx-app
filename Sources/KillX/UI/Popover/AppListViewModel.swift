@@ -101,8 +101,7 @@ final class AppListViewModel: ObservableObject {
 
     func excludePort(_ portNumber: Int) {
         if !configStore.config.excludePorts.contains(portNumber) {
-            configStore.config.excludePorts.append(portNumber)
-            configStore.save()
+            _ = configStore.addExcludedPorts([portNumber])
             showToastMessage("Port :\(portNumber) added to exclude list")
             StatusItemController.shared?.updatePopoverSize()
         }

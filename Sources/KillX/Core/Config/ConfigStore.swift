@@ -25,4 +25,36 @@ final class ConfigStore: ObservableObject {
             StatusItemController.shared?.updatePopoverSize()
         }
     }
+
+    @discardableResult
+    func addExcludedPorts(_ ports: [Int]) -> Int {
+        var added = 0
+        var exclude = config.excludePorts
+        let currentSet = Set(exclude)
+        for p in ports where p > 0 && p <= 65535 {
+            if !currentSet.contains(p) && !exclude.contains(p) {
+                exclude.append(p)
+                added += 1
+            }
+        }
+        guard added > 0 else { return 0 }
+        config.excludePorts = exclude.sorted()
+        save()
+        return added
+    }
+
+    func removeExcludedPorts(_ ports: Set<Int>) {
+        guard !ports.isEmpty else { return }
+        let oldCount = config.excludePorts.count
+        config.excludePorts.removeAll { ports.contains($0) }
+        if config.excludePorts.count != oldCount {
+            save()
+        }
+    }
+
+    func removeAllExcludedPorts() {
+        guard !config.excludePorts.isEmpty else { return }
+        config.excludePorts.removeAll()
+        save()
+    }
 }
