@@ -126,7 +126,8 @@ struct PortDetailsView: View {
                 .font(.system(size: 11))
                 .keyboardShortcut(.cancelAction)
 
-                Button("Kill Port") {
+                Button(port.isSystemProtected ? "Protected" : "Kill Port") {
+                    guard !port.isSystemProtected else { return }
                     if ConfigStore.shared.config.confirmKill {
                         uiState.showingKillConfirmation = true
                     } else {
@@ -134,7 +135,7 @@ struct PortDetailsView: View {
                     }
                 }
                 .font(.system(size: 11, weight: .semibold))
-                .disabled(uiState.isKilling)
+                .disabled(uiState.isKilling || port.isSystemProtected)
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
@@ -174,6 +175,11 @@ struct PortDetailsView: View {
     }
 
     private func performKill() {
+        guard !port.isSystemProtected else {
+            AppListViewModel.shared.showToastMessage("Port is protected by system", isError: true)
+            onClose()
+            return
+        }
         uiState.isKilling = true
         Task {
             let ok = await PortService.shared.killPort(port, force: false, tree: false)

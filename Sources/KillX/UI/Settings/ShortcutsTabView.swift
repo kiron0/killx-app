@@ -112,7 +112,7 @@ struct ShortcutsTabCloneView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Shortcut Conflict")
+                        Text((sm.shortcutError?.contains("already assigned") == true) ? "Shortcut Conflict" : "Shortcut Invalid")
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(Color.red)
 

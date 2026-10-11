@@ -183,3 +183,44 @@ struct UpdateCheckerTests {
         #expect(!checker.isVersion("0.9.0", greaterThan: "1.0.0"))
     }
 }
+
+@Suite("ShortcutManager Tests")
+struct ShortcutManagerTests {
+    @Test("Shortcut modifier validation")
+    @MainActor
+    func testShortcutModifierValidation() {
+        let sm = ShortcutManager.shared
+        // Plain letter without modifier should be rejected
+        let resPlain = sm.setKeys(["A"], for: .activateMenu)
+        #expect(!resPlain)
+        #expect(sm.shortcutError != nil)
+
+        // Valid shortcut with modifier should succeed
+        let resValid = sm.setKeys(["^", "⌥", "Z"], for: .activateMenu)
+        #expect(resValid)
+        #expect(sm.shortcutError == nil)
+
+        // Reset back to default
+        sm.resetDefaults()
+        #expect(sm.activateMenuKeys == ["^", "⌥", "A"])
+        #expect(sm.activateMenuEnabled == true)
+    }
+
+    @Test("Force kill all prompt configuration")
+    @MainActor
+    func testForceKillAllPrompt() {
+        let vm = AppListViewModel.shared
+        ConfigStore.shared.config.confirmKill = true
+        vm.ports = [
+            PortInfo(port: 3000, pid: 1234, processName: "node"),
+            PortInfo(port: 8080, pid: 5678, processName: "python")
+        ]
+
+        vm.confirmAndForceKillAll()
+        #expect(vm.pendingKillConfirmation != nil)
+        #expect(vm.pendingKillConfirmation?.isForced == true)
+        #expect(vm.pendingKillConfirmation?.title.contains("Force") == true)
+
+        vm.pendingKillConfirmation = nil
+    }
+}

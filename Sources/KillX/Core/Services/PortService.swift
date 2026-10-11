@@ -103,7 +103,7 @@ public final class PortService {
             return await DockerService.shared.stopContainer(containerId: docker.containerId, force: force)
         }
 
-        let shouldKillTree = tree || ConfigStore.shared.config.treeKillByDefault || PortService.isDevProcess(name: port.processName, command: port.command)
+        let shouldKillTree = tree || ConfigStore.shared.config.treeKillByDefault
         if shouldKillTree {
             return await terminateProcessTree(pid: port.pid, force: force)
         }
@@ -155,7 +155,6 @@ public final class PortService {
                 startTime: raw.startTime
             ))
 
-            // Stop climbing if current node is a host boundary (shell, terminal, IDE, GUI app)
             if !isListener && PortService.isHostBoundary(pid: raw.pid, name: raw.name, command: raw.command) {
                 break
             }
@@ -164,11 +163,12 @@ public final class PortService {
                 break
             }
 
-            // Stop before ascending into IDE, GUI app, or system protected parent
             if let parent = allProcs[raw.ppid] {
-                if PortService.isIDEOrEditor(parent.name, command: parent.command) ||
-                   PortService.isGUIApplication(pid: parent.pid) ||
-                   SystemPortProtection.isSystemProtected(pid: parent.pid, processName: parent.name) {
+                if PortService.isHostBoundary(pid: parent.pid, name: parent.name, command: parent.command) {
+                    break
+                }
+            } else {
+                if raw.ppid <= 1 || SystemPortProtection.isSystemProtected(pid: raw.ppid) {
                     break
                 }
             }
@@ -190,9 +190,13 @@ public final class PortService {
         let ancestry = await traceProcessTree(pid: pid)
 
         let rootPid = getSupervisorRootPid(ancestry: ancestry) ?? pid
-        if SystemPortProtection.isSystemProtected(pid: rootPid) {
+        if rootPid <= 1 || SystemPortProtection.isSystemProtected(pid: rootPid) {
             return false
         }
+        if let rootProc = allProcs[rootPid], PortService.isHostBoundary(pid: rootPid, name: rootProc.name, command: rootProc.command) {
+            return false
+        }
+
         let descendants = getAllDescendantPids(rootPid: rootPid, procs: allProcs)
         var allPids = [rootPid] + descendants
         if !allPids.contains(pid) {
@@ -399,7 +403,7 @@ public final class PortService {
             DispatchQueue.global(qos: .userInitiated).async {
                 let proc = Process()
                 proc.executableURL = URL(fileURLWithPath: "/bin/ps")
-                proc.arguments = ["-eo", "pid,ppid,user,comm,command"]
+                proc.arguments = ["-axo", "pid=,ppid=,user=,ucomm=,args="]
                 let pipe = Pipe()
                 proc.standardOutput = pipe
                 proc.standardError = Pipe()
@@ -411,22 +415,23 @@ public final class PortService {
                     proc.waitUntilExit()
                     if let text = String(data: data, encoding: .utf8) {
                         let lines = text.components(separatedBy: "\n")
-                        for line in lines.dropFirst() {
+                        for line in lines {
                             let trimmed = line.trimmingCharacters(in: .whitespaces)
-                            let parts = trimmed.split(separator: " ", omittingEmptySubsequences: true)
+                            guard !trimmed.isEmpty else { continue }
+                            let parts = trimmed.split(separator: " ", maxSplits: 4, omittingEmptySubsequences: true)
                             if parts.count >= 4,
                                let pid = pid_t(parts[0]),
                                let ppid = pid_t(parts[1]) {
                                 let user = String(parts[2])
-                                let comm = String(parts[3])
-                                let name = (comm as NSString).lastPathComponent
-                                let command = parts.dropFirst(4).joined(separator: " ")
+                                let ucomm = String(parts[3])
+                                let command = parts.count > 4 ? String(parts[4]).trimmingCharacters(in: .whitespaces) : ucomm
+
                                 map[pid] = RawProcessItem(
                                     pid: pid,
                                     ppid: ppid,
                                     user: user,
-                                    name: name,
-                                    command: command.isEmpty ? name : command,
+                                    name: ucomm,
+                                    command: command.isEmpty ? ucomm : command,
                                     cwd: nil,
                                     startTime: nil
                                 )
@@ -444,14 +449,16 @@ public final class PortService {
     private func getSupervisorRootPid(ancestry: [ProcessTreeNodeInfo]) -> pid_t? {
         guard !ancestry.isEmpty else { return nil }
 
-        // Start from listener (index 0) and climb up towards parents as long as it's a dev process.
-        // Stop before any shell, terminal, IDE, GUI app, or system host boundary.
         var supervisorPid = ancestry[0].pid
         for node in ancestry {
             if PortService.isHostBoundary(pid: node.pid, name: node.name, command: node.command) {
                 break
             }
             supervisorPid = node.pid
+        }
+        if let first = ancestry.first(where: { $0.pid == supervisorPid }),
+           PortService.isHostBoundary(pid: supervisorPid, name: first.name, command: first.command) {
+            return ancestry[0].pid
         }
         return supervisorPid
     }
@@ -492,24 +499,31 @@ public final class PortService {
         let lowerName = name.lowercased()
         let lowerCmd = command.lowercased()
 
-        // Exact process-name matches for known IDE executables
         let exactNames: Set<String> = [
             "zed", "xcode", "sublime_text", "idea", "pycharm", "webstorm",
             "goland", "clion", "phpstorm", "rider", "rubymine", "fleet",
-            "eclipse", "atom", "ptyhost", "cursor", "windsurf"
+            "eclipse", "atom", "ptyhost", "cursor", "windsurf", "code"
         ]
         if exactNames.contains(lowerName) { return true }
 
         // Prefix/substring matches safe enough to avoid false positives
-        let namePrefixes = ["antigravity", "vscode", "code helper"]
+        let namePrefixes = ["antigravity", "vscode", "code helper", "cursor", "windsurf"]
         for prefix in namePrefixes {
             if lowerName.hasPrefix(prefix) { return true }
         }
 
-        // Electron = host boundary only when the command path is inside a known IDE .app bundle
-        // Standalone user Electron apps (Slack, Discord, Figma) are NOT treated as boundaries.
+        if lowerCmd.contains("/extensions/antigravity/") ||
+           lowerCmd.contains("language_server_macos_arm") ||
+           lowerCmd.contains("language_server") ||
+           lowerCmd.contains("--extension_server_port") ||
+           lowerName.contains("extensionhost") ||
+           lowerName.contains("ptyhost") ||
+           lowerCmd.contains("extensionhost") {
+            return true
+        }
+
         let ideBundlePaths = [
-            "antigravity ide.app", "cursor.app", "visual studio code.app", "code.app",
+            "antigravity ide.app", "antigravity.app", "cursor.app", "visual studio code.app", "code.app",
             "zed.app", "windsurf.app", "fleet.app", "webstorm.app", "pycharm.app",
             "goland.app", "clion.app", "phpstorm.app", "rider.app", "rubymine.app",
             "idea.app", "xcode.app"
@@ -542,8 +556,23 @@ public final class PortService {
         if isShell(name) { return true }
         if isTerminalOrMultiplexer(name) { return true }
         if isIDEOrEditor(name, command: command) { return true }
+        if SystemPortProtection.isSystemProtected(pid: pid, processName: name, bundleIdentifier: nil, executablePath: nil) {
+            return true
+        }
+
+         var buffer = [CChar](repeating: 0, count: 4096)
+        let ret = proc_pidpath(pid, &buffer, UInt32(buffer.count))
+        if ret > 0 {
+            let path = String(cString: buffer)
+            if isIDEOrEditor((path as NSString).lastPathComponent, command: path) {
+                return true
+            }
+            if SystemPortProtection.isSystemProtected(pid: pid, processName: name, bundleIdentifier: nil, executablePath: path) {
+                return true
+            }
+        }
+
         if isGUIApplication(pid: pid) { return true }
-        if SystemPortProtection.isSystemProtected(pid: pid, processName: name) { return true }
         return false
     }
 

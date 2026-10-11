@@ -20,6 +20,18 @@ public enum SystemPortProtection {
         "com.apple.identityservicesd"
     ]
 
+    public static let criticalIDEBundleIds: Set<String> = [
+        "com.google.antigravity-ide",
+        "com.microsoft.VSCode",
+        "com.microsoft.VSCodeInsiders",
+        "com.todesktop.230313mzl4w4u92",
+        "com.exafunction.windsurf",
+        "dev.zed.Zed",
+        "com.apple.dt.Xcode",
+        "com.sublimetext.4",
+        "com.sublimetext.3"
+    ]
+
     public static let criticalSystemProcesses: Set<String> = [
         "launchd",
         "kernel_task",
@@ -43,7 +55,12 @@ public enum SystemPortProtection {
         "diskarbitrationd",
         "powerd",
         "antigravity",
-        "antigravity-ide"
+        "antigravity-ide",
+        "antigravity helper",
+        "code helper",
+        "language_server_macos_arm",
+        "language_server",
+        "ptyhost"
     ]
 
     public static let supportedKillXBundleIds: Set<String> = [
@@ -70,6 +87,12 @@ public enum SystemPortProtection {
             if criticalAppleBundleIds.contains(bid) {
                 return true
             }
+            if criticalIDEBundleIds.contains(bid) ||
+               bid.contains("antigravity") ||
+               bid.contains("vscode") ||
+               bid.hasPrefix("com.jetbrains.") {
+                return true
+            }
         }
 
         let lowerName = processName.lowercased()
@@ -78,10 +101,14 @@ public enum SystemPortProtection {
             if criticalSystemProcesses.contains(lowerName) {
                 return true
             }
+            if lowerName.hasPrefix("antigravity") || lowerName.hasPrefix("code helper") {
+                return true
+            }
         }
 
         let path = (executablePath ?? "").isEmpty ? resolvedPath(for: pid) : (executablePath ?? "")
         if !path.isEmpty {
+            let lowerPath = path.lowercased()
             if path.hasPrefix("/System/Library/PrivateFrameworks/")
                 || path.hasPrefix("/System/Library/CoreServices/")
                 || path.hasPrefix("/System/Library/")
@@ -89,6 +116,16 @@ public enum SystemPortProtection {
                 || path.hasPrefix("/Library/Apple/System/")
                 || path.hasPrefix("/usr/libexec/")
                 || path.hasPrefix("/usr/sbin/") {
+                return true
+            }
+            if lowerPath.contains("antigravity ide.app") ||
+               lowerPath.contains("antigravity.app") ||
+               lowerPath.contains("/extensions/antigravity/") ||
+               lowerPath.contains("visual studio code.app") ||
+               lowerPath.contains("cursor.app") ||
+               lowerPath.contains("windsurf.app") ||
+               lowerPath.contains("xcode.app") ||
+               lowerPath.contains("language_server_macos_arm") {
                 return true
             }
         }

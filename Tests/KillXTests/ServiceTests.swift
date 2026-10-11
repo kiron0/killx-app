@@ -162,7 +162,13 @@ struct SystemPortProtectionTests {
     func testAntigravityProtection() {
         #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "antigravity"))
         #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "antigravity-ide"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "language_server_macos_arm"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, bundleIdentifier: "com.google.antigravity-ide"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, bundleIdentifier: "com.microsoft.VSCode"))
         #expect(PortService.isHostBoundary(pid: 9999, name: "antigravity"))
+        #expect(PortService.isHostBoundary(pid: 9999, name: "language_server_macos_arm"))
+        #expect(PortService.isIDEOrEditor("code"))
+        #expect(PortService.isIDEOrEditor("language_server_macos_arm", command: "/Applications/Antigravity IDE.app/Contents/Resources/app/extensions/antigravity/bin/language_server_macos_arm"))
         // Electron is only a boundary when its command path is inside a known IDE bundle
         #expect(PortService.isIDEOrEditor("Electron", command: "/Applications/Antigravity IDE.app/Contents/MacOS/Electron"))
         #expect(!PortService.isIDEOrEditor("Electron", command: "/Applications/Slack.app/Contents/MacOS/Electron"))

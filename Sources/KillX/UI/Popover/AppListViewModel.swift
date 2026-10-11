@@ -300,6 +300,48 @@ final class AppListViewModel: ObservableObject {
         confirmAndKillSelectedPorts(force: force, tree: configStore.config.treeKillByDefault)
     }
 
+    func confirmAndForceKillAll() {
+        let targets = ports.filter { !$0.isSystemProtected }
+        guard !targets.isEmpty else { return }
+
+        let useTree = configStore.config.treeKillByDefault
+        let count = targets.count
+
+        guard configStore.config.confirmKill else {
+            Task { await forceKillAll() }
+            return
+        }
+
+        let title = useTree ? "Force Tree Kill All (\(count)) Ports?" : "Force Kill All (\(count)) Ports?"
+        let portList = targets.prefix(5).map { ":\($0.port) (\($0.processName))" }.joined(separator: ", ")
+        let remainder = targets.count > 5 ? " and \(targets.count - 5) more" : ""
+
+        var msg = "All targets: \(portList)\(remainder)\n\n"
+        msg += "⚠️ Caution: Force killing will immediately send SIGKILL to all non-system ports and terminate them without allowing graceful shutdown.\n\n"
+        msg += "Unsaved work in all running dev servers and processes will be lost."
+
+        pendingKillConfirmation = KillConfirmationRequest(
+            title: title,
+            message: msg,
+            confirmButtonTitle: "Force Kill All (\(count))",
+            isForced: true,
+            action: { [weak self] in
+                await self?.forceKillAll()
+            }
+        )
+    }
+
+    func forceKillAll() async {
+        let targets = ports.filter { !$0.isSystemProtected }
+        guard !targets.isEmpty else { return }
+        let count = await PortService.shared.killMultiplePorts(targets, force: true, tree: configStore.config.treeKillByDefault)
+        if count > 0 {
+            SoundService.playKillAll()
+            showToastMessage("Force killed \(count) ports")
+            await refresh()
+        }
+    }
+
     func tracePort(_ port: PortInfo) async {
         inspectedPort = port
         isTracingTree = true

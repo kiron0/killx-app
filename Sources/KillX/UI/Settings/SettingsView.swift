@@ -504,15 +504,7 @@ struct GeneralTabCloneView: View {
                     onConfirm: {
                         configStore.config = KillXConfig.default
                         configStore.save()
-                        ShortcutManager.shared.showPopoverEnabled = true
-                        ShortcutManager.shared.showPopoverKeys = ["⌥", "K"]
-                        ShortcutManager.shared.saveShowPopover()
-                        ShortcutManager.shared.quitAllEnabled = false
-                        ShortcutManager.shared.quitAllKeys = []
-                        ShortcutManager.shared.saveQuitAll()
-                        ShortcutManager.shared.forceQuitAllEnabled = false
-                        ShortcutManager.shared.forceQuitAllKeys = []
-                        ShortcutManager.shared.saveForceQuitAll()
+                        ShortcutManager.shared.resetDefaults()
                         LaunchAtLoginService.shared.isEnabled = false
                         withAnimation(.easeInOut(duration: 0.15)) {
                             viewState.showResetConfirmation = false

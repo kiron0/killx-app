@@ -60,6 +60,14 @@ final class ShortcutManager: ObservableObject {
 
     @discardableResult
     func setKeys(_ newKeys: [String], for slot: Slot) -> Bool {
+        if !newKeys.isEmpty {
+            let modifiers: Set<String> = ["^", "⌥", "⇧", "⌘"]
+            if !newKeys.contains(where: { modifiers.contains($0) }) {
+                shortcutError = "Shortcut must include at least one modifier key (^, ⌥, ⇧, ⌘)."
+                return false
+            }
+        }
+
         guard conflicts(keys: newKeys, excluding: slot) else {
             shortcutError = nil
             switch slot {
@@ -71,6 +79,20 @@ final class ShortcutManager: ObservableObject {
         }
         shortcutError = "This shortcut is already assigned to another action."
         return false
+    }
+
+    func resetDefaults() {
+        activateMenuEnabled = true
+        activateMenuKeys = ["^", "⌥", "A"]
+        quitAllEnabled = false
+        quitAllKeys = ["^", "⌥", "Q"]
+        forceQuitAllEnabled = false
+        forceQuitAllKeys = ["^", "⌥", "⌘", "Q"]
+        shortcutError = nil
+        registrationError = nil
+        saveShowPopover()
+        saveQuitAll()
+        saveForceQuitAll()
     }
 
     var showPopoverEnabled: Bool {
@@ -147,7 +169,7 @@ final class ShortcutManager: ObservableObject {
         }
 
         if forceQuitAllEnabled && pressedKeys == forceQuitAllKeys {
-            Task { await AppListViewModel.shared.quitAll(force: true) }
+            Task { AppListViewModel.shared.confirmAndForceKillAll() }
             return true
         }
 
@@ -161,7 +183,8 @@ final class ShortcutManager: ObservableObject {
         23: "5", 24: "=", 25: "9", 26: "7", 27: "-", 28: "8", 29: "0",
         30: "]", 31: "O", 32: "U", 33: "[", 34: "I", 35: "P", 36: "↩",
         37: "L", 38: "J", 39: "'", 40: "K", 41: ";", 42: "\\", 43: ",",
-        44: "/", 45: "N", 46: "M", 47: ".", 48: "Tab", 49: "Space", 50: "`"
+        44: "/", 45: "N", 46: "M", 47: ".", 48: "Tab", 49: "Space", 50: "`",
+        123: "←", 124: "→", 125: "↓", 126: "↑"
     ]
 
     nonisolated static func keyCodeToString(_ keyCode: UInt16) -> String? {
