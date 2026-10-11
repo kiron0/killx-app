@@ -111,10 +111,14 @@ struct SoundServiceTests {
     func testPlaySounds() {
         SoundService.isAudioDisabledForTesting = true
         ConfigStore.shared.config.playSounds = true
+        SoundService.playKillSingle()
+        SoundService.playKillAll()
         SoundService.playQuitSingle()
         SoundService.playQuitAll()
 
         ConfigStore.shared.config.playSounds = false
+        SoundService.playKillSingle()
+        SoundService.playKillAll()
         SoundService.playQuitSingle()
         SoundService.playQuitAll()
     }

@@ -32,6 +32,10 @@ struct DevServerRowView: View {
                     RoundedRectangle(cornerRadius: 4)
                         .fill(accentColor.opacity(0.18))
                 )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .strokeBorder(accentColor.opacity(0.35), lineWidth: 0.7)
+                )
                 .foregroundStyle(accentColor)
                 .layoutPriority(1)
 
@@ -84,8 +88,8 @@ struct DevServerRowView: View {
                 }
                 .padding(.horizontal, 6)
                 .padding(.vertical, 3)
-                .background(vm.isOptionKeyPressed ? Color.red.opacity(0.18) : accentColor.opacity(0.18))
-                .foregroundStyle(vm.isOptionKeyPressed ? Color.red : accentColor)
+                .background(vm.isOptionKeyPressed ? KillXTheme.forceColor.opacity(0.18) : accentColor.opacity(0.18))
+                .foregroundStyle(vm.isOptionKeyPressed ? KillXTheme.forceColor : accentColor)
                 .clipShape(RoundedRectangle(cornerRadius: 4))
             }
             .buttonStyle(.plain)

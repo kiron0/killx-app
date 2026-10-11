@@ -348,7 +348,7 @@ final class AppListViewModel: ObservableObject {
     func killPort(_ port: PortInfo, force: Bool = false, tree: Bool = false) async {
         let ok = await PortService.shared.killPort(port, force: force, tree: tree)
         if ok {
-            SoundService.playQuitSingle()
+            SoundService.playKillSingle()
             showToastMessage("Killed :\(port.port) (\(port.processName))")
             await refresh()
         }
@@ -359,7 +359,7 @@ final class AppListViewModel: ObservableObject {
         guard !targets.isEmpty else { return }
         let count = await PortService.shared.killMultiplePorts(targets, force: force, tree: tree)
         if count > 0 {
-            SoundService.playQuitAll()
+            SoundService.playKillAll()
             showToastMessage("Killed \(count) ports")
             await refresh()
         }
@@ -368,7 +368,7 @@ final class AppListViewModel: ObservableObject {
     func sweepDevServers(force: Bool = false) async {
         let count = await DevServerService.shared.sweepAllDevServers(force: force)
         if count > 0 {
-            SoundService.playQuitAll()
+            SoundService.playKillAll()
             showToastMessage("Swept \(count) dev servers")
             await refresh()
         } else {

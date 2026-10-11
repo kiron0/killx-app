@@ -13,7 +13,7 @@ struct PortRowView: View {
     @StateObject private var state = RowUIState()
 
     private let accentColor = KillXTheme.accent
-    private let forceColor = Color.red
+    private let forceColor = KillXTheme.forceColor
 
     private var isSelected: Bool {
         vm.selectedPorts.contains(port.id)
@@ -39,6 +39,10 @@ struct PortRowView: View {
                 .background(
                     RoundedRectangle(cornerRadius: 3.5)
                         .fill(port.isDevServer ? accentColor.opacity(0.18) : Color.primary.opacity(0.08))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3.5)
+                        .strokeBorder(port.isDevServer ? accentColor.opacity(0.35) : Color.clear, lineWidth: 0.7)
                 )
                 .foregroundStyle(port.isDevServer ? accentColor : Color.primary)
                 .layoutPriority(1)

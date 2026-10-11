@@ -8,6 +8,10 @@ struct KillXSelectionCheckbox: View {
         ZStack {
             RoundedRectangle(cornerRadius: 3)
                 .fill(isSelected || isPartial ? KillXTheme.accent : Color.primary.opacity(0.08))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 3)
+                        .strokeBorder(isSelected || isPartial ? KillXTheme.accent : Color.primary.opacity(0.18), lineWidth: 0.7)
+                )
                 .frame(width: 14, height: 14)
 
             if isSelected {

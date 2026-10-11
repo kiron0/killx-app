@@ -8,26 +8,35 @@ enum SoundService {
             || NSClassFromString("XCTest") != nil
     }()
 
-    static func playQuitSingle() {
+    static func playKillSingle() {
         guard !isAudioDisabledForTesting else { return }
         guard ConfigStore.shared.config.playSounds else { return }
-        playSound(named: "quit-single")
+        playSound(named: "kill-single")
+    }
+
+    static func playKillAll() {
+        guard !isAudioDisabledForTesting else { return }
+        guard ConfigStore.shared.config.playSounds else { return }
+        playSound(named: "kill-all")
+    }
+
+    static func playQuitSingle() {
+        playKillSingle()
     }
 
     static func playQuitAll() {
-        guard !isAudioDisabledForTesting else { return }
-        guard ConfigStore.shared.config.playSounds else { return }
-        playSound(named: "quit-all")
+        playKillAll()
     }
 
     private static func playSound(named name: String) {
-        if let url = Bundle.main.url(forResource: name, withExtension: "aiff"),
+        let soundName = name.replacingOccurrences(of: "quit-", with: "kill-")
+        if let url = Bundle.main.url(forResource: soundName, withExtension: "aiff"),
            let sound = NSSound(contentsOf: url, byReference: true) {
             sound.play()
             return
         }
 
-        let localPath = "Support/Sounds/\(name).aiff"
+        let localPath = "Support/Sounds/\(soundName).aiff"
         if FileManager.default.fileExists(atPath: localPath),
            let sound = NSSound(contentsOfFile: localPath, byReference: true) {
             sound.play()

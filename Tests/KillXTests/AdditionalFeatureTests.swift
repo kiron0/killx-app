@@ -56,12 +56,12 @@ struct SettingsTabTests {
 
 @Suite("Theme and Visual Tokens Tests")
 struct ThemeTests {
-    @Test("KillXTheme accent color is red")
+    @Test("KillXTheme accent color is high visibility sky")
     func testThemeAccent() {
         let accent = KillXTheme.accentNSColor
-        #expect(accent.redComponent > 0.85)
-        #expect(accent.greenComponent < 0.35)
-        #expect(accent.blueComponent < 0.35)
+        #expect(accent.blueComponent > 0.90)
+        #expect(accent.greenComponent > 0.65)
+        #expect(accent.redComponent < 0.30)
     }
 
     @Test("KillXTheme window background color available")

@@ -2,20 +2,19 @@ import SwiftUI
 import AppKit
 
 enum KillXTheme {
-    static let accent = Color(red: 232/255, green: 50/255, blue: 62/255)
-    static let accentNSColor = NSColor(srgbRed: 232/255, green: 50/255, blue: 62/255, alpha: 1.0)
-    static let accentSecondary = Color(red: 200/255, green: 30/255, blue: 42/255)
-    static let accentLight = Color(red: 245/255, green: 75/255, blue: 85/255)
-    static let redGradient = LinearGradient(
-        colors: [accent, accentSecondary],
+    static let accent = Color(red: 56/255, green: 189/255, blue: 248/255)
+    static let accentNSColor = NSColor(srgbRed: 56/255, green: 189/255, blue: 248/255, alpha: 1.0)
+    static let accentSecondary = Color(red: 2/255, green: 132/255, blue: 199/255)
+    static let accentLight = Color(red: 125/255, green: 211/255, blue: 252/255)
+    static let accentGradient = LinearGradient(
+        colors: [Color(red: 56/255, green: 189/255, blue: 248/255), Color(red: 2/255, green: 132/255, blue: 199/255)],
         startPoint: .top,
         endPoint: .bottom
     )
-    static let accentGradient = redGradient
-    static let goldGradient = redGradient
-    static let forceColor = Color(red: 255/255, green: 40/255, blue: 40/255)
+    static let skyGradient = accentGradient
+    static let forceColor = Color(red: 99/255, green: 102/255, blue: 241/255)
     static let forceGradient = LinearGradient(
-        colors: [Color(red: 255/255, green: 55/255, blue: 55/255), Color(red: 195/255, green: 20/255, blue: 25/255)],
+        colors: [Color(red: 129/255, green: 140/255, blue: 248/255), Color(red: 79/255, green: 70/255, blue: 229/255)],
         startPoint: .top,
         endPoint: .bottom
     )

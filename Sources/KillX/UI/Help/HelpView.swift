@@ -86,7 +86,7 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
             sections: [
                 KillXHelpSection(
                     title: "Port numbers & Process info",
-                    body: "Each row displays the port number (e.g. :3000) and app name. Dev servers feature a highlighted red badge, while Docker-bound ports show a docker tag."
+                    body: "Each row displays the port number (e.g. :3000) and app name. Dev servers feature a highlighted dev badge, while Docker-bound ports show a docker tag."
                 ),
                 KillXHelpSection(
                     title: "Row options menu",
@@ -178,8 +178,8 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
             summary: "Customize window themes, Classic retro styling, and Liquid Glass translucency.",
             sections: [
                 KillXHelpSection(
-                    title: "Signature Red Theme",
-                    body: "KillX features the signature crimson red aesthetic matching the app icon, high-contrast dark accents, and adaptive window backgrounds."
+                    title: "Signature Sky Blue Theme",
+                    body: "KillX features the signature sky blue aesthetic, high-contrast dark accents, and adaptive window backgrounds."
                 ),
                 KillXHelpSection(
                     title: "Liquid Glass Mode",

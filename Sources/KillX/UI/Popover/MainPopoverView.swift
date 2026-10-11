@@ -14,6 +14,7 @@ struct MainPopoverView: View {
     private static let accentColor = KillXTheme.accent
     private static let accentGradient = KillXTheme.accentGradient
     private static let forceGradient = KillXTheme.forceGradient
+    private static let forceColor = KillXTheme.forceColor
 
     var body: some View {
         VStack(spacing: 0) {
@@ -150,7 +151,7 @@ struct MainPopoverView: View {
             .clipShape(RoundedRectangle(cornerRadius: 6))
             .shadow(
                 color: isEnabled
-                    ? (isForced ? Color.red.opacity(uiState.isActionButtonHovered ? 0.35 : 0.15) : Self.accentColor.opacity(uiState.isActionButtonHovered ? 0.3 : 0.12))
+                    ? (isForced ? Self.forceColor.opacity(uiState.isActionButtonHovered ? 0.35 : 0.15) : Self.accentColor.opacity(uiState.isActionButtonHovered ? 0.3 : 0.12))
                     : Color.clear,
                 radius: 2,
                 y: 1
