@@ -14,8 +14,8 @@ KillX is built completely using Swift Package Manager (SPM) with no mandatory Xc
 
 1. Fork and clone the repository:
    ```bash
-   git clone https://github.com/kiron0/killx.git
-   cd killx/app
+   git clone https://github.com/kiron0/killx-app.git
+   cd killx-app/app
    ```
 
 2. Build debug binary:

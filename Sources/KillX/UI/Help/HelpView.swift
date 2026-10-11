@@ -497,7 +497,7 @@ struct HelpView: View {
             Spacer()
 
             Button("GitHub Issues") {
-                if let url = URL(string: "https://github.com/kiron0/killx/issues") {
+                if let url = URL(string: "https://github.com/kiron0/killx-app/issues") {
                     NSWorkspace.shared.open(url)
                 }
             }

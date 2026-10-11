@@ -14,7 +14,7 @@ final class UpdateChecker: ObservableObject {
     static let shared = UpdateChecker()
 
     private let repoOwner = "kiron0"
-    private let repoName = "killx"
+    private let repoName = "killx-app"
 
     var releasesWebURL: URL {
         URL(string: "https://github.com/\(repoOwner)/\(repoName)/releases")!
@@ -28,7 +28,7 @@ final class UpdateChecker: ObservableObject {
     @Published var checkState: UpdateCheckState = .idle
 
     var currentVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.1"
     }
 
     func resetState() {

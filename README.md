@@ -9,15 +9,15 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kiron0/killx/actions/workflows/ci.yml"><img src="https://github.com/kiron0/killx/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
+  <a href="https://github.com/kiron0/killx-app/actions/workflows/ci.yml"><img src="https://github.com/kiron0/killx-app/actions/workflows/ci.yml/badge.svg" alt="CI Status" /></a>
   <img src="https://img.shields.io/badge/macOS-14.0%2B-black?logo=apple" alt="macOS 14+" />
   <img src="https://img.shields.io/badge/Swift-6-orange?logo=swift" alt="Swift 6" />
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License" /></a>
 </p>
 
 <p align="center">
-  <a href="https://github.com/kiron0/killx/releases/latest">
-    <img src="https://img.shields.io/github/v/release/kiron0/killx?label=Download%20KillX%20for%20macOS&style=for-the-badge&color=FFB800&labelColor=1a1a1a&logo=apple" alt="Download KillX for macOS" height="38" />
+  <a href="https://github.com/kiron0/killx-app/releases/latest">
+    <img src="https://img.shields.io/github/v/release/kiron0/killx-app?label=Download%20KillX%20for%20macOS&style=for-the-badge&color=38bdf8&labelColor=1a1a1a&logo=apple" alt="Download KillX for macOS" height="38" />
   </a>
 </p>
 
