@@ -112,7 +112,7 @@ struct ExcludeTabView: View {
                     subtitle: request.message,
                     confirmTitle: request.removesAll ? "Remove All" : "Remove",
                     systemImage: "trash.fill",
-                    isForced: true,
+                    isForced: false,
                     cardWidth: 260,
                     onConfirm: {
                         configStore.removeExcludedPorts(Set(request.ports))

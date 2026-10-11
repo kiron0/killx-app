@@ -77,7 +77,7 @@ struct KillConfirmationOverlay: View {
             VStack(spacing: 10) {
                 Image(systemName: systemImage)
                     .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(isForced ? KillXTheme.forceColor : KillXTheme.accent)
+                    .foregroundStyle(KillXTheme.accent)
 
                 VStack(spacing: 3) {
                     Text(title)
@@ -119,14 +119,10 @@ struct KillConfirmationOverlay: View {
                             .frame(height: 24)
                             .background(
                                 RoundedRectangle(cornerRadius: 6)
-                                    .fill(
-                                        isForced
-                                            ? KillXTheme.forceGradient
-                                            : KillXTheme.accentGradient
-                                    )
+                                    .fill(KillXTheme.accentGradient)
                             )
                             .shadow(
-                                color: (isForced ? KillXTheme.forceColor : KillXTheme.accent).opacity(state.isConfirmHovered ? 0.35 : 0.15),
+                                color: KillXTheme.accent.opacity(state.isConfirmHovered ? 0.35 : 0.15),
                                 radius: 2,
                                 y: 1
                             )

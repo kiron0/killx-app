@@ -126,7 +126,7 @@ struct PortDetailsView: View {
                 .font(.system(size: 11))
                 .keyboardShortcut(.cancelAction)
 
-                Button("Kill Port", role: .destructive) {
+                Button("Kill Port") {
                     if ConfigStore.shared.config.confirmKill {
                         uiState.showingKillConfirmation = true
                     } else {

@@ -505,7 +505,7 @@ struct GeneralTabCloneView: View {
                     subtitle: "This will restore KillX to default factory settings.",
                     confirmTitle: "Reset All",
                     systemImage: "arrow.counterclockwise.circle.fill",
-                    isForced: true,
+                    isForced: false,
                     cardWidth: 260,
                     onConfirm: {
                         configStore.config = KillXConfig.default
