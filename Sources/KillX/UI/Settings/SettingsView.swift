@@ -47,8 +47,8 @@ enum SettingsTab: String, CaseIterable {
     var contentHeight: CGFloat {
         switch self {
         case .general:
-            if #available(macOS 26.0, *) { return 320 }
-            return 290
+            if #available(macOS 26.0, *) { return 330 }
+            return 300
         case .exclude:   return 306
         case .shortcuts: return 221
         case .about:     return 186
@@ -363,8 +363,7 @@ struct GeneralTabCloneView: View {
     @StateObject private var viewState = GeneralTabViewState()
 
     private var tabHeight: CGFloat {
-        if #available(macOS 26.0, *) { return 320 }
-        return 290
+        SettingsTab.general.contentHeight
     }
 
     var body: some View {
@@ -492,6 +491,7 @@ struct GeneralTabCloneView: View {
         .padding(.top, 14)
         .padding(.bottom, 10)
         .frame(width: 480, height: tabHeight, alignment: .topLeading)
+        .background(KillXTheme.paneBackground)
         .overlay {
             if viewState.showResetConfirmation {
                 KillConfirmationOverlay(
