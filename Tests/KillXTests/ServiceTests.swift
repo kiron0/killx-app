@@ -67,26 +67,6 @@ struct PortServiceTests {
     }
 }
 
-@Suite("DevServerService Tests")
-struct DevServerServiceTests {
-    @Test("Project root detection from start directory")
-    func testFindProjectRoot() {
-        let service = DevServerService.shared
-        let tempDir = FileManager.default.temporaryDirectory
-            .appendingPathComponent("killx-test-project-\(UUID().uuidString)")
-        let subDir = tempDir.appendingPathComponent("src/components")
-
-        try? FileManager.default.createDirectory(at: subDir, withIntermediateDirectories: true)
-        let packageJson = tempDir.appendingPathComponent("package.json")
-        try? "{}".write(to: packageJson, atomically: true, encoding: .utf8)
-
-        let detectedRoot = service.findProjectRoot(from: subDir.path)
-        #expect(detectedRoot == tempDir.path)
-
-        try? FileManager.default.removeItem(at: tempDir)
-    }
-}
-
 @Suite("DockerService Tests")
 struct DockerServiceTests {
     @Test("DockerInfo published port matching")
@@ -133,7 +113,7 @@ struct SystemPortProtectionTests {
         #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "mDNSResponder"))
         #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "launchd"))
         #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "killx"))
-        #expect(!SystemPortProtection.isSystemProtected(pid: 9999, processName: "node", isDevServer: true))
+        #expect(!SystemPortProtection.isSystemProtected(pid: 9999, processName: "node"))
     }
 
     @Test("Critical bundle identifiers and self are protected")

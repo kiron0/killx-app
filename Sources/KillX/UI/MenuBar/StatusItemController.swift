@@ -281,16 +281,6 @@ final class StatusItemController: NSObject {
         menu.addItem(NSMenuItem.separator())
 
         menu.addItem(MenuHelper.makeItem(
-            title: "Sweep Dev Servers",
-            keyEquivalent: "d",
-            systemSymbolName: "arrow.triangle.branch",
-            action: {
-                self.showPopover()
-                AppListViewModel.shared.confirmAndSweepDevServers()
-            }
-        ))
-
-        menu.addItem(MenuHelper.makeItem(
             title: "Refresh Ports",
             keyEquivalent: "r",
             systemSymbolName: "arrow.clockwise",

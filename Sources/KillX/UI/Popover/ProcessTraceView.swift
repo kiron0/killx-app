@@ -21,9 +21,9 @@ struct ProcessTraceWindowView: View {
                     .padding(.vertical, 4)
                     .background(
                         RoundedRectangle(cornerRadius: 5)
-                            .fill(port.isDevServer ? accentColor.opacity(0.18) : Color.primary.opacity(0.08))
+                            .fill(Color.primary.opacity(0.08))
                     )
-                    .foregroundStyle(port.isDevServer ? accentColor : Color.primary)
+                    .foregroundStyle(Color.primary)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(port.displayAppName)

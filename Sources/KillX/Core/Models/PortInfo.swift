@@ -73,7 +73,7 @@ public struct PortInfo: Identifiable, Hashable {
         if let docker {
             return docker.name
         }
-        return isDevServer ? processName.capitalized : processName
+        return processName
     }
 
     public var memoryFormatted: String {

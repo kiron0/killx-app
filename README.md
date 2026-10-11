@@ -31,9 +31,6 @@
   - Kill single port listeners gracefully (`SIGTERM`) or hold <kbd>⌥ Option</kbd> for force kill (`SIGKILL`).
   - **Process Tree Killing (`--tree`)**: Terminate root supervisors (npm, yarn, pnpm, cargo, vite) and all child processes cleanly.
   - **Docker-Aware**: Detects Docker container port forwards and allows stopping containers gracefully.
-- **Dev Servers Sweeper (`Dev` tab)**:
-  - Automatically identifies hung dev servers (Node, Next.js, Vite, Webpack, Turbo, Python, Rails, Go, Cargo).
-  - One-click **Sweep Dev Servers** to free all development ports at once.
 - **Deep Process Trace (`killx trace`)**:
   - Interactive process tree visualizer detailing parent PIDs, PPIDs, working directories, and startup commands.
 - **macOS Applications (`Apps` tab)**:

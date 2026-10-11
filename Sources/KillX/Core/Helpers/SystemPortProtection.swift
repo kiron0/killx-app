@@ -54,13 +54,8 @@ public enum SystemPortProtection {
         pid: pid_t,
         processName: String = "",
         bundleIdentifier: String? = nil,
-        executablePath: String? = nil,
-        isDevServer: Bool = false
+        executablePath: String? = nil
     ) -> Bool {
-        if isDevServer {
-            return false
-        }
-
         if pid <= 1 || pid == ProcessInfo.processInfo.processIdentifier {
             return true
         }
@@ -100,13 +95,11 @@ public enum SystemPortProtection {
     }
 
     public static func isSystemProtected(port: PortInfo) -> Bool {
-        if port.isDevServer { return false }
         return isSystemProtected(
             pid: port.pid,
             processName: port.processName,
             bundleIdentifier: port.appBundleId,
-            executablePath: nil,
-            isDevServer: port.isDevServer
+            executablePath: nil
         )
     }
 

@@ -11,8 +11,7 @@ All notable changes to KillX macOS App will be documented in this file.
 - Real-time listening port inspection across all TCP processes.
 - One-click port kill and Option-key dynamic SIGKILL escalation.
 - Process tree termination (`--tree`) to kill parent supervisor trees (npm, vite, bun, cargo).
-- Visual process ancestry tree trace with PID hierarchy.
-- Development server sweeper to free hung web dev ports in one click.
+- System protected process defense to safeguard macOS core services.
 - Docker container port detection and graceful container stopping.
 - Instant search filter and port number / process name / RAM / CPU sorting options.
 - Native system sound effects and toast notifications.

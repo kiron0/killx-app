@@ -82,11 +82,11 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
             category: .essentials,
             title: "Port List & Row Actions",
             symbol: "network",
-            summary: "Understand port numbers, dev server badges, Docker tags, and row options.",
+            summary: "Understand port numbers, Docker tags, and row options.",
             sections: [
                 KillXHelpSection(
                     title: "Port numbers & Process info",
-                    body: "Each row displays the port number (e.g. :3000) and app name. Dev servers feature a highlighted dev badge, while Docker-bound ports show a docker tag."
+                    body: "Each row displays the port number (e.g. :3000) and app name, while Docker-bound ports show a docker tag."
                 ),
                 KillXHelpSection(
                     title: "Row options menu",
@@ -120,23 +120,6 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
             ]
         ),
         KillXHelpTopic(
-            id: "dev-sweeper",
-            category: .features,
-            title: "Dev Server Sweeper",
-            symbol: "arrow.triangle.branch",
-            summary: "Detect and sweep all active web frameworks and development servers in one click.",
-            sections: [
-                KillXHelpSection(
-                    title: "Dev server filter",
-                    body: "Switch to the Dev Servers filter at the top of the popover to see only web development servers such as Vite, Next.js, Webpack, Astro, Remix, and Cargo."
-                ),
-                KillXHelpSection(
-                    title: "Sweep Dev Servers",
-                    body: "Click Sweep Dev Servers to terminate all development listeners and their complete process trees at once, freeing up ports instantly."
-                )
-            ]
-        ),
-        KillXHelpTopic(
             id: "exclude",
             category: .features,
             title: "Exclude Ports",
@@ -149,7 +132,7 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
                 ),
                 KillXHelpSection(
                     title: "Protected operations",
-                    body: "Excluded ports are never killed during batch kills or dev server sweeps, preventing accidental disruption of your environment."
+                    body: "Excluded ports are never killed during batch kills, preventing accidental disruption of your environment."
                 ),
                 KillXHelpSection(
                     title: "System protections",
@@ -166,7 +149,7 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
             sections: [
                 KillXHelpSection(
                     title: "Global hotkeys",
-                    body: "Settings > Shortcuts allows recording custom global hotkeys for Toggle Popover, Sweep Dev Servers, and Force Kill Selected Ports."
+                    body: "Settings > Shortcuts allows recording custom global hotkeys for Toggle Popover, Kill Selected Ports, and Force Kill Selected Ports."
                 ),
                 KillXHelpSection(
                     title: "In-popover shortcuts",

@@ -3,6 +3,8 @@ import AppKit
 
 private final class PortDetailsUIState: ObservableObject {
     @Published var copied = false
+    @Published var showingKillConfirmation = false
+    @Published var isKilling = false
 }
 
 struct PortDetailsView: View {
@@ -31,9 +33,9 @@ struct PortDetailsView: View {
                             .padding(.vertical, 2)
                             .background(
                                 RoundedRectangle(cornerRadius: 4)
-                                    .fill(port.isDevServer ? accentColor.opacity(0.18) : Color.primary.opacity(0.08))
+                                    .fill(Color.primary.opacity(0.08))
                             )
-                            .foregroundStyle(port.isDevServer ? accentColor : Color.primary)
+                            .foregroundStyle(Color.primary)
                     }
 
                     Text(verbatim: "\(port.processName) • PID \(port.pid) • \(port.protocolName) \(port.state)")
@@ -125,10 +127,14 @@ struct PortDetailsView: View {
                 .keyboardShortcut(.cancelAction)
 
                 Button("Kill Port", role: .destructive) {
-                    onClose()
-                    AppListViewModel.shared.confirmAndKillPort(port, force: false, tree: false)
+                    if ConfigStore.shared.config.confirmKill {
+                        uiState.showingKillConfirmation = true
+                    } else {
+                        performKill()
+                    }
                 }
                 .font(.system(size: 11, weight: .semibold))
+                .disabled(uiState.isKilling)
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 12)
@@ -143,7 +149,41 @@ struct PortDetailsView: View {
                     .ignoresSafeArea()
             }
         }
+        .overlay {
+            if uiState.showingKillConfirmation {
+                KillConfirmationOverlay(
+                    title: "Kill Port :\(port.port)?",
+                    subtitle: "Terminating \(port.processName) (PID \(port.pid)) will close this port listener.",
+                    confirmTitle: "Kill Port",
+                    systemImage: "questionmark.circle.fill",
+                    isForced: false,
+                    cardWidth: 260,
+                    onConfirm: {
+                        uiState.showingKillConfirmation = false
+                        performKill()
+                    },
+                    onCancel: {
+                        uiState.showingKillConfirmation = false
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.18), value: uiState.showingKillConfirmation)
         .ignoresSafeArea()
+    }
+
+    private func performKill() {
+        uiState.isKilling = true
+        Task {
+            let ok = await PortService.shared.killPort(port, force: false, tree: false)
+            if ok {
+                SoundService.playKillSingle()
+                AppListViewModel.shared.showToastMessage("Killed :\(port.port) (\(port.processName))")
+                await AppListViewModel.shared.refresh()
+            }
+            onClose()
+        }
     }
 
     private var header: some View {

@@ -24,7 +24,7 @@ public final class PortService {
         return false
     }
 
-    public func fetchListeningPorts(includeSystem: Bool = false) async -> [PortInfo] {
+    public func fetchListeningPorts() async -> [PortInfo] {
         guard let output = await runLsof() else { return [] }
         let parsed = parseLsofOutput(output)
         if parsed.isEmpty { return [] }
@@ -48,7 +48,6 @@ public final class PortService {
             let cwd = cwdMap[item.pid]
             let cpu = cpuMap[item.pid] ?? 0.0
             let memory = memoryUsage(pid: item.pid)
-            let isDev = Self.isDevProcess(name: item.process, command: cmd)
 
             let docker = dockerContainers.first(where: { $0.publishedPort == item.port })
             let appResolution = resolveApp(pid: item.pid, processName: item.process, command: cmd, docker: docker, allProcs: allProcs)
@@ -57,11 +56,10 @@ public final class PortService {
                 pid: item.pid,
                 processName: item.process,
                 bundleIdentifier: appResolution.bundleId,
-                executablePath: appResolution.executablePath,
-                isDevServer: isDev
+                executablePath: appResolution.executablePath
             )
 
-            if !includeSystem && isProtected {
+            if isProtected {
                 continue
             }
 
@@ -79,8 +77,8 @@ public final class PortService {
                 cpuUsage: cpu,
                 cwd: cwd,
                 docker: docker,
-                isDevServer: isDev,
-                isSystemProtected: isProtected
+                isDevServer: false,
+                isSystemProtected: false
             ))
         }
 
@@ -130,16 +128,6 @@ public final class PortService {
             if ok { killedCount += 1 }
         }
         return killedCount
-    }
-
-    @discardableResult
-    public func sweepDevServers(force: Bool = false) async -> [PortInfo] {
-        let ports = await fetchListeningPorts()
-        let devPorts = ports.filter(\.isDevServer)
-        for dev in devPorts {
-            await killPort(dev, force: force, tree: true)
-        }
-        return devPorts
     }
 
     public func traceProcessTree(pid: pid_t) async -> [ProcessTreeNodeInfo] {

@@ -16,7 +16,6 @@ final class AppListViewModel: ObservableObject {
 
     @Published var ports: [PortInfo] = []
     @Published var selectedPorts: Set<String> = []
-    @Published var devServers: [DevServerInfo] = []
 
     @Published var searchQuery: String = ""
     @Published var isOptionKeyPressed: Bool = false
@@ -50,7 +49,7 @@ final class AppListViewModel: ObservableObject {
     private let quotes = [
         "Find and kill the process using a port ⚡",
         "Free up port 3000 in one click 🤘",
-        "Hung dev server no more 🧹",
+        "Free up occupied ports 🧹",
         "Kill listener or entire supervisor tree 🎯",
         "Clean ports, clear mind 🚀",
         "Docker container stopped cleanly 🐳"
@@ -148,7 +147,6 @@ final class AppListViewModel: ObservableObject {
 
         let fetchedPorts = await PortService.shared.fetchListeningPorts()
         ports = sort(ports: fetchedPorts)
-        devServers = await DevServerService.shared.fetchDevServers()
 
         let validPortIds = Set(ports.map(\.id))
         selectedPorts = selectedPorts.intersection(validPortIds)
@@ -175,7 +173,6 @@ final class AppListViewModel: ObservableObject {
         guard !isLoading else { return }
         let fetchedPorts = await PortService.shared.fetchListeningPorts()
         ports = sort(ports: fetchedPorts)
-        devServers = await DevServerService.shared.fetchDevServers()
 
         let validPortIds = Set(ports.map(\.id))
         selectedPorts = selectedPorts.intersection(validPortIds)
@@ -276,81 +273,6 @@ final class AppListViewModel: ObservableObject {
         )
     }
 
-    func confirmAndSweepDevServers(force: Bool = false) {
-        let devPorts = ports.filter(\.isDevServer)
-        guard !devPorts.isEmpty else {
-            showToastMessage("No dev servers found")
-            return
-        }
-
-        let isForced = force || isOptionKeyPressed || configStore.config.force == .force
-
-        guard configStore.config.confirmKill else {
-            Task { await sweepDevServers(force: isForced) }
-            return
-        }
-
-        let count = devPorts.count
-        let title = isForced ? "Force Sweep Dev Servers (\(count))?" : "Sweep Dev Servers (\(count))?"
-
-        let portList = devPorts.prefix(5).map { ":\($0.port) (\($0.processName))" }.joined(separator: ", ")
-        let remainder = devPorts.count > 5 ? " and \(devPorts.count - 5) more" : ""
-
-        var msg = "Dev servers: \(portList)\(remainder)\n\n"
-        msg += "⚠️ Caution: This will terminate all \(count) development server processes and their full process trees.\n\n"
-        if isForced {
-            msg += "SIGKILL will terminate all dev server trees immediately."
-        } else {
-            msg += "Ensure all changes are saved before terminating. Are you sure you want to proceed?"
-        }
-
-        let confirmTitle = isForced ? "Force Sweep (\(count))" : "Sweep Dev Servers"
-
-        pendingKillConfirmation = KillConfirmationRequest(
-            title: title,
-            message: msg,
-            confirmButtonTitle: confirmTitle,
-            isForced: isForced,
-            action: { [weak self] in
-                await self?.sweepDevServers(force: isForced)
-            }
-        )
-    }
-
-    func confirmAndKillDevServer(_ server: DevServerInfo, force: Bool = false) {
-        let isForced = force || isOptionKeyPressed || configStore.config.force == .force
-
-        guard configStore.config.confirmKill else {
-            Task { await killDevServer(server, force: isForced) }
-            return
-        }
-
-        let title = isForced ? "Force Kill Dev Server :\(server.port.port)?" : "Kill Dev Server :\(server.port.port)?"
-
-        var msg = "Project: \(server.projectName)\nProcess: \(server.port.processName) (PID \(server.port.pid))\n"
-        if !server.displayPath.isEmpty {
-            msg += "Path: \(server.displayPath)\n"
-        }
-        msg += "\n⚠️ Caution: This will terminate the dev server and its entire process tree.\n\n"
-        if isForced {
-            msg += "SIGKILL will be sent immediately without allowing graceful shutdown."
-        } else {
-            msg += "Any unsaved code execution or active build will stop. Proceed?"
-        }
-
-        let confirmTitle = isForced ? "Force Kill" : "Kill Server"
-
-        pendingKillConfirmation = KillConfirmationRequest(
-            title: title,
-            message: msg,
-            confirmButtonTitle: confirmTitle,
-            isForced: isForced,
-            action: { [weak self] in
-                await self?.killDevServer(server, force: isForced)
-            }
-        )
-    }
-
     func killPort(_ port: PortInfo, force: Bool = false, tree: Bool = false) async {
         guard !port.isSystemProtected else {
             showToastMessage("Port is protected by system", isError: true)
@@ -373,21 +295,6 @@ final class AppListViewModel: ObservableObject {
             showToastMessage("Killed \(count) ports")
             await refresh()
         }
-    }
-
-    func sweepDevServers(force: Bool = false) async {
-        let count = await DevServerService.shared.sweepAllDevServers(force: force)
-        if count > 0 {
-            SoundService.playKillAll()
-            showToastMessage("Swept \(count) dev servers")
-            await refresh()
-        } else {
-            showToastMessage("No dev servers found")
-        }
-    }
-
-    func killDevServer(_ server: DevServerInfo, force: Bool = false) async {
-        await killPort(server.port, force: force, tree: true)
     }
 
     func quitAll(force: Bool = false) async {

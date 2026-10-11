@@ -399,7 +399,7 @@ struct GeneralTabCloneView: View {
                     set: { configStore.config.confirmKill = $0; configStore.save() }
                 ))
             } help: {
-                HelpPopoverButton(text: "Show a caution prompt before terminating ports or dev servers.")
+                HelpPopoverButton(text: "Show a caution prompt before terminating ports.")
             }
 
             row(label: "") {
@@ -647,7 +647,7 @@ struct ShortcutsTabCloneView: View {
 
                 shortcutLine(
                     id: "quit",
-                    label: "Sweep dev servers:",
+                    label: "Kill selected ports:",
                     isEnabled: $sm.quitAllEnabled,
                     keyList: sm.quitAllKeys
                 )

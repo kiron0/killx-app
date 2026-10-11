@@ -99,13 +99,12 @@ struct PortInfoTests {
         #expect(portWithApp.appName == "Google Chrome")
         #expect(portWithApp.appBundleId == "com.google.Chrome")
 
-        let portDev = PortInfo(
+        let portFallback = PortInfo(
             port: 5173,
             pid: 222,
-            processName: "vite",
-            isDevServer: true
+            processName: "vite"
         )
-        #expect(portDev.displayAppName == "Vite")
+        #expect(portFallback.displayAppName == "vite")
 
         let portDocker = PortInfo(
             port: 6379,
@@ -114,28 +113,6 @@ struct PortInfoTests {
             docker: DockerInfo(containerId: "redis1", name: "cache-redis", image: "redis", ports: "6379", publishedPort: 6379)
         )
         #expect(portDocker.displayAppName == "cache-redis")
-    }
-
-    @Test("DevServerInfo model properties")
-    func testDevServerInfo() {
-        let port = PortInfo(
-            port: 3000,
-            pid: 9999,
-            processName: "node",
-            command: "next dev",
-            isDevServer: true
-        )
-        let devInfo = DevServerInfo(
-            port: port,
-            projectName: "my-next-app",
-            projectRoot: "/Users/test/my-next-app",
-            displayPath: "~/my-next-app"
-        )
-
-        #expect(devInfo.id == "3000-9999")
-        #expect(devInfo.projectName == "my-next-app")
-        #expect(devInfo.displayPath == "~/my-next-app")
-        #expect(devInfo.port.port == 3000)
     }
 
     @Test("ProcessTreeNodeInfo model properties")

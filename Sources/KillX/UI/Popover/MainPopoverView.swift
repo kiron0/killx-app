@@ -260,15 +260,6 @@ struct MainPopoverView: View {
         menu.autoenablesItems = false
 
         menu.addItem(MenuHelper.makeItem(
-            title: "Sweep Dev Servers",
-            keyEquivalent: "d",
-            systemSymbolName: "arrow.triangle.branch",
-            action: {
-                vm.confirmAndSweepDevServers()
-            }
-        ))
-
-        menu.addItem(MenuHelper.makeItem(
             title: "Refresh Ports",
             keyEquivalent: "r",
             systemSymbolName: "arrow.clockwise",

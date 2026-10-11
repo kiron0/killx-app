@@ -39,13 +39,9 @@ struct PortRowView: View {
                 .padding(.vertical, 1.8)
                 .background(
                     RoundedRectangle(cornerRadius: 3.5)
-                        .fill(port.isDevServer ? accentColor.opacity(0.18) : Color.primary.opacity(0.08))
+                        .fill(Color.primary.opacity(0.08))
                 )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 3.5)
-                        .strokeBorder(port.isDevServer ? accentColor.opacity(0.35) : Color.clear, lineWidth: 0.7)
-                )
-                .foregroundStyle(port.isDevServer ? accentColor : Color.primary)
+                .foregroundStyle(Color.primary)
                 .layoutPriority(1)
 
             HStack(spacing: 4) {

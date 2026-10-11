@@ -138,19 +138,6 @@ struct AppListViewModelTests {
         #expect(vm.pendingKillConfirmation?.message.contains("3000") == true)
     }
 
-    @Test("confirmAndSweepDevServers shows dev servers caution")
-    func testConfirmAndSweepDevServersCaution() {
-        ConfigStore.shared.config.confirmKill = true
-        vm.ports = [port1, port3]
-        vm.pendingKillConfirmation = nil
-
-        vm.confirmAndSweepDevServers(force: false)
-
-        #expect(vm.pendingKillConfirmation != nil)
-        #expect(vm.pendingKillConfirmation?.title.contains("Sweep") == true)
-        #expect(vm.pendingKillConfirmation?.message.contains("⚠️ Caution") == true)
-    }
-
     @Test("confirmAndKillPort skips prompt when confirmKill is disabled")
     func testConfirmAndKillPortDisabled() {
         ConfigStore.shared.config.confirmKill = false
