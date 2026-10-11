@@ -11,7 +11,9 @@ public final class PortService {
         "next-server", "python", "python3", "django", "rails", "ruby", "php",
         "java", "cargo", "go", "air", "nodemon", "webpack", "esbuild",
         "turbo", "nuxt", "astro", "remix", "svelte", "nest", "flask",
-        "uvicorn", "gunicorn", "fastapi"
+        "uvicorn", "gunicorn", "fastapi", "uv", "poetry", "pipenv", "dotnet",
+        "mvn", "gradle", "hypercorn", "granian", "daphne", "ts-node", "ts-node-dev",
+        "tsx", "wrangler", "prisma"
     ]
 
     public static func isDevProcess(name: String, command: String = "") -> Bool {
@@ -77,7 +79,7 @@ public final class PortService {
                 cpuUsage: cpu,
                 cwd: cwd,
                 docker: docker,
-                isDevServer: false,
+                isDevServer: PortService.isDevProcess(name: item.process, command: cmd),
                 isSystemProtected: false
             ))
         }
@@ -101,7 +103,8 @@ public final class PortService {
             return await DockerService.shared.stopContainer(containerId: docker.containerId, force: force)
         }
 
-        if tree {
+        let shouldKillTree = tree || ConfigStore.shared.config.treeKillByDefault || PortService.isDevProcess(name: port.processName, command: port.command)
+        if shouldKillTree {
             return await terminateProcessTree(pid: port.pid, force: force)
         }
 
@@ -152,12 +155,20 @@ public final class PortService {
                 startTime: raw.startTime
             ))
 
-            if isTerminalOrInit(raw.name) || raw.ppid <= 1 {
+            // Stop climbing if current node is a host boundary (shell, terminal, IDE, GUI app)
+            if !isListener && PortService.isHostBoundary(pid: raw.pid, name: raw.name, command: raw.command) {
                 break
             }
 
-            if isShell(raw.name) {
-                if let parent = allProcs[raw.ppid], parent.pid <= 1 || isTerminalOrInit(parent.name) {
+            if raw.ppid <= 1 {
+                break
+            }
+
+            // Stop before ascending into IDE, GUI app, or system protected parent
+            if let parent = allProcs[raw.ppid] {
+                if PortService.isIDEOrEditor(parent.name, command: parent.command) ||
+                   PortService.isGUIApplication(pid: parent.pid) ||
+                   SystemPortProtection.isSystemProtected(pid: parent.pid, processName: parent.name) {
                     break
                 }
             }
@@ -184,11 +195,21 @@ public final class PortService {
         }
         let descendants = getAllDescendantPids(rootPid: rootPid, procs: allProcs)
         var allPids = [rootPid] + descendants
-        allPids = allPids.filter {
-            $0 > 1 &&
-            $0 != ProcessInfo.processInfo.processIdentifier &&
-            !SystemPortProtection.isSystemProtected(pid: $0)
+        if !allPids.contains(pid) {
+            allPids.append(pid)
         }
+
+        // HARD SAFETY FILTER: Never terminate shells, terminals, IDEs, GUI apps, or system processes!
+        allPids = allPids.filter { p in
+            guard p > 1, p != ProcessInfo.processInfo.processIdentifier else { return false }
+            guard !SystemPortProtection.isSystemProtected(pid: p) else { return false }
+            let name = allProcs[p]?.name ?? ""
+            let cmd = allProcs[p]?.command ?? ""
+            guard !PortService.isHostBoundary(pid: p, name: name, command: cmd) else { return false }
+            return true
+        }
+
+        guard !allPids.isEmpty else { return false }
 
         let reversed = Array(allPids.reversed())
         let sig = force ? SIGKILL : SIGTERM
@@ -422,12 +443,17 @@ public final class PortService {
 
     private func getSupervisorRootPid(ancestry: [ProcessTreeNodeInfo]) -> pid_t? {
         guard !ancestry.isEmpty else { return nil }
-        for node in ancestry.reversed() {
-            if !isShell(node.name) && !isTerminalOrInit(node.name) && node.pid > 1 {
-                return node.pid
+
+        // Start from listener (index 0) and climb up towards parents as long as it's a dev process.
+        // Stop before any shell, terminal, IDE, GUI app, or system host boundary.
+        var supervisorPid = ancestry[0].pid
+        for node in ancestry {
+            if PortService.isHostBoundary(pid: node.pid, name: node.name, command: node.command) {
+                break
             }
+            supervisorPid = node.pid
         }
-        return ancestry.first?.pid
+        return supervisorPid
     }
 
     private func getAllDescendantPids(rootPid: pid_t, procs: [pid_t: RawProcessItem]) -> [pid_t] {
@@ -448,15 +474,60 @@ public final class PortService {
         return pids
     }
 
-    private func isShell(_ name: String) -> Bool {
+    public static func isShell(_ name: String) -> Bool {
         let n = name.lowercased()
-        return ["sh", "bash", "zsh", "fish", "csh", "tcsh", "dash", "ksh"].contains(n)
+        return ["sh", "bash", "zsh", "fish", "csh", "tcsh", "dash", "ksh", "nu", "elvish"].contains(n)
     }
 
-    private func isTerminalOrInit(_ name: String) -> Bool {
+    public static func isTerminalOrMultiplexer(_ name: String) -> Bool {
         let n = name.lowercased()
-        return ["terminal", "iterm", "iterm2", "alacritty", "kitty", "wezterm",
-                "hyper", "warp", "launchd", "init", "systemd", "login", "sshd"].contains(n)
+        return [
+            "terminal", "iterm", "iterm2", "alacritty", "kitty", "wezterm",
+            "hyper", "warp", "rio", "ghostty", "tabby", "tmux", "screen",
+            "launchd", "init", "systemd", "login", "sshd"
+        ].contains(n)
+    }
+
+    public static func isIDEOrEditor(_ name: String, command: String = "") -> Bool {
+        let lowerName = name.lowercased()
+        let lowerCmd = command.lowercased()
+        let patterns = [
+            "antigravity", "cursor", "vscode", "code", "electron", "zed", "xcode",
+            "sublime_text", "idea", "pycharm", "webstorm", "goland", "clion",
+            "phpstorm", "rider", "rubymine", "fleet", "eclipse", "atom", "ptyhost"
+        ]
+        for pattern in patterns {
+            if lowerName.contains(pattern) || lowerCmd.contains(pattern) {
+                return true
+            }
+        }
+        return false
+    }
+
+    public static func isGUIApplication(pid: pid_t) -> Bool {
+        guard pid > 1 else { return false }
+        if let app = NSRunningApplication(processIdentifier: pid), app.bundleIdentifier != nil {
+            return true
+        }
+        var buffer = [CChar](repeating: 0, count: 4096)
+        let ret = proc_pidpath(pid, &buffer, UInt32(buffer.count))
+        if ret > 0 {
+            let path = String(cString: buffer)
+            if path.contains(".app/") {
+                return true
+            }
+        }
+        return false
+    }
+
+    public static func isHostBoundary(pid: pid_t, name: String, command: String = "") -> Bool {
+        if pid <= 1 { return true }
+        if isShell(name) { return true }
+        if isTerminalOrMultiplexer(name) { return true }
+        if isIDEOrEditor(name, command: command) { return true }
+        if isGUIApplication(pid: pid) { return true }
+        if SystemPortProtection.isSystemProtected(pid: pid, processName: name) { return true }
+        return false
     }
 
     private func memoryUsage(pid: pid_t) -> UInt64 {

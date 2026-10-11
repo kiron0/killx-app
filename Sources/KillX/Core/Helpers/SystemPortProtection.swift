@@ -41,7 +41,9 @@ public enum SystemPortProtection {
         "windowserver",
         "syslogd",
         "diskarbitrationd",
-        "powerd"
+        "powerd",
+        "antigravity",
+        "antigravity-ide"
     ]
 
     public static let supportedKillXBundleIds: Set<String> = [

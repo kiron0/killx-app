@@ -157,5 +157,17 @@ struct SystemPortProtectionTests {
         let killedTree = await PortService.shared.terminateProcessTree(pid: 1)
         #expect(!killedTree)
     }
+
+    @Test("Antigravity and IDE protection")
+    func testAntigravityProtection() {
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "antigravity"))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "antigravity-ide"))
+        #expect(PortService.isHostBoundary(pid: 9999, name: "antigravity"))
+        #expect(PortService.isHostBoundary(pid: 9999, name: "Electron", command: "/Applications/Antigravity IDE.app/Contents/MacOS/Electron"))
+        #expect(PortService.isHostBoundary(pid: 9999, name: "zsh"))
+        #expect(PortService.isHostBoundary(pid: 9999, name: "bash"))
+        #expect(!PortService.isHostBoundary(pid: 9999, name: "bun"))
+        #expect(!PortService.isHostBoundary(pid: 9999, name: "node"))
+    }
 }
 
