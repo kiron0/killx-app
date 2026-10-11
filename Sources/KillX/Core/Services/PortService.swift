@@ -54,10 +54,11 @@ public final class PortService {
             let docker = dockerContainers.first(where: { $0.publishedPort == item.port })
             let appResolution = resolveApp(pid: item.pid, processName: item.process, command: cmd, docker: docker, allProcs: allProcs)
 
+            let ownBundleId = NSRunningApplication(processIdentifier: item.pid)?.bundleIdentifier ?? appFromProcPath(pid: item.pid)?.bundleId
             let isProtected = SystemPortProtection.isSystemProtected(
                 pid: item.pid,
                 processName: item.process,
-                bundleIdentifier: appResolution.bundleId,
+                bundleIdentifier: ownBundleId,
                 executablePath: appResolution.executablePath
             )
 
@@ -644,6 +645,12 @@ public final class PortService {
             return AppResolution(appName: name, bundleId: "com.docker.docker", executablePath: execPath)
         }
 
+        // Dev processes (node, bun, python, vite, etc.) resolve directly to clean runtime name
+        if PortService.isDevProcess(name: processName, command: command) {
+            let cleanName = cleanRuntimeName(processName: processName, command: command)
+            return AppResolution(appName: cleanName, bundleId: nil, executablePath: execPath)
+        }
+
         if let running = NSRunningApplication(processIdentifier: pid),
            let name = running.localizedName, !name.isEmpty {
             return AppResolution(appName: name, bundleId: running.bundleIdentifier, executablePath: execPath ?? running.executableURL?.path)
@@ -661,6 +668,16 @@ public final class PortService {
                 guard let item = procs[curr] else { break }
                 let parentPid = item.ppid
                 if parentPid <= 1 { break }
+
+                // Stop climbing if current or parent is a shell, terminal, or IDE host boundary
+                if PortService.isShell(item.name) || PortService.isTerminalOrMultiplexer(item.name) || PortService.isIDEOrEditor(item.name, command: item.command) {
+                    break
+                }
+                if let parentProc = procs[parentPid] {
+                    if PortService.isShell(parentProc.name) || PortService.isTerminalOrMultiplexer(parentProc.name) || PortService.isIDEOrEditor(parentProc.name, command: parentProc.command) {
+                        break
+                    }
+                }
 
                 if let running = NSRunningApplication(processIdentifier: parentPid),
                    let name = running.localizedName, !name.isEmpty {

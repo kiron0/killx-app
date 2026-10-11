@@ -65,6 +65,21 @@ struct PortServiceTests {
         let redisRes = service.resolveApp(pid: 6666, processName: "redis-server")
         #expect(redisRes.appName == "Redis")
     }
+
+    @Test("Dev process listening on port is not protected and resolves to Node.js")
+    func testDevProcessNotProtected() {
+        let isProtected = SystemPortProtection.isSystemProtected(
+            pid: 96009,
+            processName: "node",
+            bundleIdentifier: nil,
+            executablePath: "/opt/homebrew/Cellar/node/26.10.0_2/bin/node"
+        )
+        #expect(!isProtected)
+
+        let appRes = PortService.shared.resolveApp(pid: 96009, processName: "node", command: "node server.js")
+        #expect(appRes.appName == "Node.js")
+        #expect(appRes.bundleId == nil)
+    }
 }
 
 @Suite("DockerService Tests")
