@@ -1,10 +1,17 @@
 import SwiftUI
 import AppKit
 
+private final class ProcessTraceUIState: ObservableObject {
+    @Published var showingKillConfirmation = false
+    @Published var isKilling = false
+}
+
 struct ProcessTraceWindowView: View {
     let port: PortInfo
     let ancestry: [ProcessTreeNodeInfo]
     var onClose: () -> Void
+
+    @StateObject private var uiState = ProcessTraceUIState()
 
     private let accentColor = KillXTheme.accent
 
@@ -37,12 +44,19 @@ struct ProcessTraceWindowView: View {
                 Spacer()
 
                 Button {
-                    onClose()
-                    AppListViewModel.shared.confirmAndKillPort(port, force: false, tree: true)
+                    if port.isSystemProtected {
+                        AppListViewModel.shared.showToastMessage("Port is protected by system", isError: true)
+                        return
+                    }
+                    if ConfigStore.shared.config.confirmKill {
+                        uiState.showingKillConfirmation = true
+                    } else {
+                        performTreeKill()
+                    }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "arrow.triangle.branch")
-                        Text("Tree Kill")
+                        Text(uiState.isKilling ? "Killing..." : "Tree Kill")
                     }
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.orange)
@@ -52,6 +66,8 @@ struct ProcessTraceWindowView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 5))
                 }
                 .buttonStyle(.plain)
+                .disabled(uiState.isKilling || port.isSystemProtected)
+                .opacity((uiState.isKilling || port.isSystemProtected) ? 0.5 : 1.0)
             }
             .padding(.horizontal, 16)
             .padding(.top, 4)
@@ -138,6 +154,7 @@ struct ProcessTraceWindowView: View {
                 }
                 .font(.system(size: 11))
                 .keyboardShortcut(.cancelAction)
+                .disabled(uiState.isKilling || uiState.showingKillConfirmation)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
@@ -152,7 +169,36 @@ struct ProcessTraceWindowView: View {
                     .ignoresSafeArea()
             }
         }
+        .overlay {
+            if uiState.showingKillConfirmation {
+                KillConfirmationOverlay(
+                    title: "Tree Kill Port :\(port.port)?",
+                    subtitle: "Terminating will kill the supervisor process and all child processes in its process tree.",
+                    confirmTitle: "Tree Kill",
+                    systemImage: "arrow.triangle.branch",
+                    isForced: false,
+                    cardWidth: 280,
+                    onConfirm: {
+                        uiState.showingKillConfirmation = false
+                        performTreeKill()
+                    },
+                    onCancel: {
+                        uiState.showingKillConfirmation = false
+                    }
+                )
+                .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            }
+        }
+        .animation(.easeInOut(duration: 0.18), value: uiState.showingKillConfirmation)
         .ignoresSafeArea()
+    }
+
+    private func performTreeKill() {
+        uiState.isKilling = true
+        Task {
+            await AppListViewModel.shared.killPort(port, force: false, tree: true)
+            onClose()
+        }
     }
 
     private var header: some View {
