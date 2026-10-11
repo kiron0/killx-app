@@ -2,27 +2,27 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-        <key>LSUIElement</key>
-    <true/>
-        <key>NSPrincipalClass</key>
-    <string>NSApplication</string>
-    <key>NSAccentColorName</key>
-    <string>AccentColor</string>
-    <key>CFBundleIconFile</key>
-    <string>AppIcon</string>
-        <key>CFBundleName</key>
-    <string>KillX</string>
-        <key>CFBundleDisplayName</key>
-    <string>KillX</string>
-    <key>CFBundleIdentifier</key>
-    <string>io.coreify.killx</string>
-    <key>CFBundleVersion</key>
-    <string>1</string>
-    <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
-        <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
-        <key>NSAppleEventsUsageDescription</key>
-    <string>KillX manages and terminates ports, dev servers, and applications.</string>
+	<key>CFBundleDisplayName</key>
+	<string>KillX</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundleIdentifier</key>
+	<string>io.coreify.killx</string>
+	<key>CFBundleName</key>
+	<string>KillX</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.1</string>
+	<key>CFBundleVersion</key>
+	<string>2</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAccentColorName</key>
+	<string>AccentColor</string>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>KillX manages and terminates ports, dev servers, and applications.</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
 </dict>
 </plist>
