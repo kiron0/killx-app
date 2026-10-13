@@ -51,12 +51,12 @@ struct ProcessTraceWindowView: View {
                     if ConfigStore.shared.config.confirmKill {
                         uiState.showingKillConfirmation = true
                     } else {
-                        performTreeKill()
+                        performKill()
                     }
                 } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: "arrow.triangle.branch")
-                        Text(uiState.isKilling ? "Killing..." : "Tree Kill")
+                        Image(systemName: "power")
+                        Text(uiState.isKilling ? "Killing..." : "Kill")
                     }
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(Color.orange)
@@ -172,15 +172,15 @@ struct ProcessTraceWindowView: View {
         .overlay {
             if uiState.showingKillConfirmation {
                 KillConfirmationOverlay(
-                    title: "Tree Kill Port :\(port.port)?",
-                    subtitle: "Terminating will kill the supervisor process and all child processes in its process tree.",
-                    confirmTitle: "Tree Kill",
-                    systemImage: "arrow.triangle.branch",
+                    title: "Kill Port :\(port.port)?",
+                    subtitle: "This also stops the supervising process and its child processes.",
+                    confirmTitle: "Kill",
+                    systemImage: "power",
                     isForced: false,
                     cardWidth: 280,
                     onConfirm: {
                         uiState.showingKillConfirmation = false
-                        performTreeKill()
+                        performKill()
                     },
                     onCancel: {
                         uiState.showingKillConfirmation = false
@@ -193,7 +193,7 @@ struct ProcessTraceWindowView: View {
         .ignoresSafeArea()
     }
 
-    private func performTreeKill() {
+    private func performKill() {
         uiState.isKilling = true
         Task {
             await AppListViewModel.shared.killPort(port, force: false)

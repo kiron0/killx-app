@@ -54,7 +54,7 @@ final class AppListViewModel: ObservableObject {
         "Find and kill the process using a port ⚡",
         "Free up port 3000 in one click 🤘",
         "Free up occupied ports 🧹",
-        "Kill listener or entire supervisor tree 🎯",
+        "Kill the port and everything behind it 🎯",
         "Clean ports, clear mind 🚀",
         "Docker container stopped cleanly 🐳"
     ]
@@ -210,9 +210,9 @@ final class AppListViewModel: ObservableObject {
 
         let title: String
         if isForced {
-            title = "Force Tree Kill Port :\(port.port)?"
+            title = "Force Kill Port :\(port.port)?"
         } else {
-            title = "Tree Kill Port :\(port.port)?"
+            title = "Kill Port :\(port.port)?"
         }
 
         var msg = "Process: \(port.processName) (PID \(port.pid))"
@@ -221,7 +221,7 @@ final class AppListViewModel: ObservableObject {
             msg += "\nDirectory: \(displayPath)"
         }
 
-        let confirmTitle = isForced ? "Force Tree Kill" : "Tree Kill"
+        let confirmTitle = isForced ? "Force Kill" : "Kill"
 
         pendingKillConfirmation = KillConfirmationRequest(
             title: title,
@@ -248,16 +248,16 @@ final class AppListViewModel: ObservableObject {
         let count = targets.count
         let title: String
         if isForced {
-            title = "Force Tree Kill (\(count)) Ports?"
+            title = "Force Kill (\(count)) Ports?"
         } else {
-            title = "Tree Kill (\(count)) Ports?"
+            title = "Kill (\(count)) Ports?"
         }
 
         let portList = targets.prefix(5).map { ":\($0.port) (\($0.processName))" }.joined(separator: ", ")
         let remainder = targets.count > 5 ? " and \(targets.count - 5) more" : ""
         let msg = "Selected targets: \(portList)\(remainder)"
 
-        let confirmTitle = isForced ? "Force Tree Kill (\(count))" : "Tree Kill (\(count))"
+        let confirmTitle = isForced ? "Force Kill (\(count))" : "Kill (\(count))"
 
         pendingKillConfirmation = KillConfirmationRequest(
             title: title,
@@ -321,7 +321,7 @@ final class AppListViewModel: ObservableObject {
             return
         }
 
-        let title = "Force Tree Kill All (\(count)) Ports?"
+        let title = "Force Kill All (\(count)) Ports?"
         let portList = targets.prefix(5).map { ":\($0.port) (\($0.processName))" }.joined(separator: ", ")
         let remainder = targets.count > 5 ? " and \(targets.count - 5) more" : ""
         let msg = "All targets: \(portList)\(remainder)"

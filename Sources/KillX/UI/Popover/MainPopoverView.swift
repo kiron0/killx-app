@@ -105,12 +105,12 @@ struct MainPopoverView: View {
 
         let (title, isEnabled, action): (String, Bool, () -> Void) = {
             if selectedCount > 0 {
-                let text = isForced ? "Force Tree Kill Selected (\(selectedCount))" : "Tree Kill Selected Ports (\(selectedCount))"
+                let text = isForced ? "Force Kill Selected (\(selectedCount))" : "Kill Selected Ports (\(selectedCount))"
                 return (text, true, {
                     vm.confirmAndKillSelectedPorts(force: isForced)
                 })
             } else {
-                let text = isForced ? "Force Tree Kill Selected Ports" : "Tree Kill Selected Ports"
+                let text = isForced ? "Force Kill Selected Ports" : "Kill Selected Ports"
                 return (text, false, {})
             }
         }()

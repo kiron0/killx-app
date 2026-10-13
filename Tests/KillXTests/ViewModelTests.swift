@@ -107,7 +107,7 @@ struct AppListViewModelTests {
         #expect(vm.pendingKillConfirmation?.title.contains("3000") == true)
         #expect(vm.pendingKillConfirmation?.message.contains("node") == true)
         #expect(vm.pendingKillConfirmation?.message.contains("⚠️ Caution") == false)
-        #expect(vm.pendingKillConfirmation?.confirmButtonTitle == "Tree Kill")
+        #expect(vm.pendingKillConfirmation?.confirmButtonTitle == "Kill")
     }
 
     @Test("confirmAndKillPort force mode sets isForced and title")
@@ -118,9 +118,9 @@ struct AppListViewModelTests {
         vm.confirmAndKillPort(port1, force: true)
 
         #expect(vm.pendingKillConfirmation != nil)
-        #expect(vm.pendingKillConfirmation?.title.contains("Force Tree Kill") == true)
+        #expect(vm.pendingKillConfirmation?.title.contains("Force Kill") == true)
         #expect(vm.pendingKillConfirmation?.isForced == true)
-        #expect(vm.pendingKillConfirmation?.confirmButtonTitle == "Force Tree Kill")
+        #expect(vm.pendingKillConfirmation?.confirmButtonTitle == "Force Kill")
         #expect(vm.pendingKillConfirmation?.message.contains("⚠️ Caution") == false)
     }
 

@@ -93,8 +93,8 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
                     body: "Click the three-dot button on any row for quick actions: view Port Details, Trace Process Tree, Copy Port Number, Copy PID, or Open in Browser (http://localhost:port)."
                 ),
                 KillXHelpSection(
-                    title: "Tree Kill",
-                    body: "Use Tree Kill from the row options menu to terminate the root supervisor (npm, vite, cargo) and all child worker processes cleanly."
+                    title: "Killing a port",
+                    body: "Kill frees the port for good: it stops the supervising process (npm, vite, cargo, ts-node-dev) together with all its child processes, so a watcher cannot re-open the port."
                 )
             ]
         ),
@@ -191,7 +191,7 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
                 ),
                 KillXHelpSection(
                     title: "Port still bound after kill",
-                    body: "If a port remains bound, hold Option and click Force Kill, or use Tree Kill to terminate supervisor processes holding open sockets."
+                    body: "If a port remains bound, hold Option and click Force Kill to send SIGKILL to the process and its supervisor."
                 )
             ]
         )
