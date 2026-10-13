@@ -85,10 +85,12 @@ struct KillConfirmationOverlay: View {
                         .foregroundStyle(Color.primary)
                         .multilineTextAlignment(.center)
 
-                    Text(subtitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(Color.secondary)
-                        .multilineTextAlignment(.center)
+                    if !subtitle.isEmpty {
+                        Text(subtitle)
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.secondary)
+                            .multilineTextAlignment(.center)
+                    }
                 }
 
                 HStack(spacing: 8) {
@@ -136,7 +138,6 @@ struct KillConfirmationOverlay: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .frame(width: cardWidth)
-            .frame(minHeight: 132)
             .background {
                 let cardShape = RoundedRectangle(cornerRadius: 12)
                 if LiquidGlass.enabled {

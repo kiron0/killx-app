@@ -216,21 +216,10 @@ final class AppListViewModel: ObservableObject {
             title = useTree ? "Tree Kill Port :\(port.port)?" : "Kill Port :\(port.port)?"
         }
 
-        var msg = "Process: \(port.processName) (PID \(port.pid))\n"
+        var msg = "Process: \(port.processName) (PID \(port.pid))"
         if let cwd = port.cwd, !cwd.isEmpty {
             let displayPath = (cwd as NSString).lastPathComponent
-            msg += "Directory: \(displayPath)\n"
-        }
-        msg += "\n⚠️ Caution: "
-        if useTree {
-            msg += "Terminating will kill the supervisor process and all child processes in its process tree.\n\n"
-        } else {
-            msg += "Terminating this process will close port :\(port.port) and sever active connections.\n\n"
-        }
-        if isForced {
-            msg += "SIGKILL will be sent immediately without allowing graceful cleanup. Any unsaved data will be lost."
-        } else {
-            msg += "Any unsaved data or state in this service will be lost. Are you sure you want to proceed?"
+            msg += "\nDirectory: \(displayPath)"
         }
 
         let confirmTitle = isForced ? "Force Kill" : (useTree ? "Tree Kill" : "Kill")
@@ -268,14 +257,7 @@ final class AppListViewModel: ObservableObject {
 
         let portList = targets.prefix(5).map { ":\($0.port) (\($0.processName))" }.joined(separator: ", ")
         let remainder = targets.count > 5 ? " and \(targets.count - 5) more" : ""
-
-        var msg = "Selected targets: \(portList)\(remainder)\n\n"
-        msg += "⚠️ Caution: Terminating these \(count) processes will shut down all associated network listeners.\n\n"
-        if isForced {
-            msg += "SIGKILL will terminate all processes immediately without graceful cleanup. Unsaved data will be lost."
-        } else {
-            msg += "Any active connections and unsaved progress will be lost. Are you sure you want to proceed?"
-        }
+        let msg = "Selected targets: \(portList)\(remainder)"
 
         let confirmTitle = isForced ? "Force Kill (\(count))" : "Kill (\(count))"
 
@@ -345,10 +327,7 @@ final class AppListViewModel: ObservableObject {
         let title = useTree ? "Force Tree Kill All (\(count)) Ports?" : "Force Kill All (\(count)) Ports?"
         let portList = targets.prefix(5).map { ":\($0.port) (\($0.processName))" }.joined(separator: ", ")
         let remainder = targets.count > 5 ? " and \(targets.count - 5) more" : ""
-
-        var msg = "All targets: \(portList)\(remainder)\n\n"
-        msg += "⚠️ Caution: Force killing will immediately send SIGKILL to all non-system ports and terminate them without allowing graceful shutdown.\n\n"
-        msg += "Unsaved work in all running dev servers and processes will be lost."
+        let msg = "All targets: \(portList)\(remainder)"
 
         pendingKillConfirmation = KillConfirmationRequest(
             title: title,

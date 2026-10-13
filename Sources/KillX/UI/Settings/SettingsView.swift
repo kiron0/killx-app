@@ -399,7 +399,7 @@ struct GeneralTabCloneView: View {
                     set: { configStore.config.confirmKill = $0; configStore.save() }
                 ))
             } help: {
-                HelpPopoverButton(text: "Show a caution prompt before terminating ports.")
+                HelpPopoverButton(text: "Show a confirmation prompt before terminating ports.")
             }
 
             row(label: "") {

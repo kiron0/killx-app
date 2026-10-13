@@ -96,8 +96,8 @@ struct AppListViewModelTests {
         #expect(vm.selectedPorts.isEmpty)
     }
 
-    @Test("confirmAndKillPort shows caution prompt when confirmKill is enabled")
-    func testConfirmAndKillPortWithCaution() {
+    @Test("confirmAndKillPort shows confirmation prompt when confirmKill is enabled")
+    func testConfirmAndKillPortConfirmation() {
         ConfigStore.shared.config.confirmKill = true
         vm.pendingKillConfirmation = nil
 
@@ -105,12 +105,12 @@ struct AppListViewModelTests {
 
         #expect(vm.pendingKillConfirmation != nil)
         #expect(vm.pendingKillConfirmation?.title.contains("3000") == true)
-        #expect(vm.pendingKillConfirmation?.message.contains("⚠️ Caution") == true)
         #expect(vm.pendingKillConfirmation?.message.contains("node") == true)
+        #expect(vm.pendingKillConfirmation?.message.contains("⚠️ Caution") == false)
         #expect(vm.pendingKillConfirmation?.confirmButtonTitle == "Kill")
     }
 
-    @Test("confirmAndKillPort force mode includes SIGKILL warning")
+    @Test("confirmAndKillPort force mode sets isForced and title")
     func testConfirmAndKillPortForceMode() {
         ConfigStore.shared.config.confirmKill = true
         vm.pendingKillConfirmation = nil
@@ -119,12 +119,13 @@ struct AppListViewModelTests {
 
         #expect(vm.pendingKillConfirmation != nil)
         #expect(vm.pendingKillConfirmation?.title.contains("Force Kill") == true)
-        #expect(vm.pendingKillConfirmation?.message.contains("SIGKILL") == true)
+        #expect(vm.pendingKillConfirmation?.isForced == true)
         #expect(vm.pendingKillConfirmation?.confirmButtonTitle == "Force Kill")
+        #expect(vm.pendingKillConfirmation?.message.contains("⚠️ Caution") == false)
     }
 
-    @Test("confirmAndKillSelectedPorts shows caution with target summary")
-    func testConfirmAndKillSelectedPortsCaution() {
+    @Test("confirmAndKillSelectedPorts shows confirmation with target summary")
+    func testConfirmAndKillSelectedPortsConfirmation() {
         ConfigStore.shared.config.confirmKill = true
         vm.ports = [port1, port2]
         vm.selectedPorts = [port1.id, port2.id]
@@ -134,8 +135,8 @@ struct AppListViewModelTests {
 
         #expect(vm.pendingKillConfirmation != nil)
         #expect(vm.pendingKillConfirmation?.title.contains("2") == true)
-        #expect(vm.pendingKillConfirmation?.message.contains("⚠️ Caution") == true)
         #expect(vm.pendingKillConfirmation?.message.contains("3000") == true)
+        #expect(vm.pendingKillConfirmation?.message.contains("⚠️ Caution") == false)
     }
 
     @Test("confirmAndKillPort skips prompt when confirmKill is disabled")
