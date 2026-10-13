@@ -173,32 +173,31 @@ struct SystemPortProtectionTests {
         #expect(!killedTree)
     }
 
-    @Test("Antigravity and IDE protection")
-    func testAntigravityProtection() {
-        #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "antigravity"))
-        #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "antigravity-ide"))
+    @Test("Dynamic, brand-free editor/IDE detection")
+    func testDynamicEditorDetection() {
+        #expect(SystemPortProtection.isEditorHelperProcess(name: "language_server_macos_arm"))
+        #expect(SystemPortProtection.isEditorHelperProcess(name: "extensionHost"))
+        #expect(SystemPortProtection.isEditorHelperProcess(name: "helper", command: "node --type=extensionHost"))
+        #expect(SystemPortProtection.isEditorHelperProcess(name: "helper", command: "node --type=ptyHost"))
+        #expect(SystemPortProtection.isEditorHelperProcess(name: "Code Helper (Plugin)", command: "/Applications/AnyEditor.app/Contents/Frameworks/Code Helper.app/Contents/MacOS/Code Helper"))
+        #expect(!SystemPortProtection.isEditorHelperProcess(name: "node"))
+
+        #expect(PortService.isIDEOrEditor("Electron", command: "/Applications/SomeEditor.app/Contents/MacOS/Electron"))
+        #expect(PortService.isIDEOrEditor("SomeEditor", command: "/Applications/SomeEditor.app/Contents/MacOS/SomeEditor"))
+        #expect(PortService.isIDEOrEditor("language_server", command: "/whatever/bin/language_server"))
+        #expect(!PortService.isIDEOrEditor("node"))
+        #expect(!PortService.isIDEOrEditor("code-server"))
+        #expect(!PortService.isIDEOrEditor("bun", command: "bun run dev"))
+    }
+
+    @Test("Helper processes are protected from the kill path")
+    func testHelperProtection() {
         #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "language_server_macos_arm"))
-        #expect(SystemPortProtection.isSystemProtected(pid: 9999, bundleIdentifier: "com.google.antigravity-ide"))
-        #expect(SystemPortProtection.isSystemProtected(pid: 9999, bundleIdentifier: "com.microsoft.VSCode"))
-        #expect(SystemPortProtection.isSystemProtected(pid: 9999, bundleIdentifier: "ai.opencode.desktop"))
-        #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "opencode"))
-        #expect(PortService.isHostBoundary(pid: 9999, name: "antigravity"))
         #expect(PortService.isHostBoundary(pid: 9999, name: "language_server_macos_arm"))
-        #expect(PortService.isHostBoundary(pid: 9999, name: "opencode"))
-        #expect(PortService.isIDEOrEditor("code"))
-        #expect(PortService.isIDEOrEditor("opencode"))
-        #expect(PortService.isIDEOrEditor("OpenCode", command: "/Applications/OpenCode.app/Contents/MacOS/OpenCode"))
-        #expect(PortService.isIDEOrEditor("opencode", command: "/Users/toufiqhasankiron/.opencode/bin/opencode"))
-        #expect(PortService.isIDEOrEditor("language_server_macos_arm", command: "/Applications/Antigravity IDE.app/Contents/Resources/app/extensions/antigravity/bin/language_server_macos_arm"))
-        // Electron is only a boundary when its command path is inside a known IDE bundle
-        #expect(PortService.isIDEOrEditor("Electron", command: "/Applications/Antigravity IDE.app/Contents/MacOS/Electron"))
-        #expect(!PortService.isIDEOrEditor("Electron", command: "/Applications/Slack.app/Contents/MacOS/Electron"))
         #expect(PortService.isHostBoundary(pid: 9999, name: "zsh"))
         #expect(PortService.isHostBoundary(pid: 9999, name: "bash"))
         #expect(!PortService.isHostBoundary(pid: 9999, name: "bun"))
         #expect(!PortService.isHostBoundary(pid: 9999, name: "node"))
-        // code-server is a dev server, not an IDE host
-        #expect(!PortService.isIDEOrEditor("code-server"))
     }
 }
 

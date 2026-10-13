@@ -45,6 +45,7 @@ final class AppListViewModel: ObservableObject {
     @Published var isBatchKilling: Bool = false
 
     private var hasInitializedSelection = false
+    private var hasLoadedOnce = false
     private var toastTask: Task<Void, Never>?
     private var refreshTask: Task<Void, Never>?
     private var fetchGeneration = 0
@@ -143,7 +144,7 @@ final class AppListViewModel: ObservableObject {
     }
 
     func refresh() async {
-        isLoading = true
+        if !hasLoadedOnce { isLoading = true }
         fetchGeneration += 1
         let gen = fetchGeneration
         let selectedAllBeforeRefresh = isAllSelected
@@ -172,6 +173,7 @@ final class AppListViewModel: ObservableObject {
         }
 
         isLoading = false
+        hasLoadedOnce = true
         StatusItemController.shared?.updatePopoverSize()
     }
 

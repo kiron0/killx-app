@@ -491,44 +491,8 @@ public final class PortService {
     }
 
     public static func isIDEOrEditor(_ name: String, command: String = "") -> Bool {
-        let lowerName = name.lowercased()
-        let lowerCmd = command.lowercased()
-
-        let exactNames: Set<String> = [
-            "zed", "xcode", "sublime_text", "idea", "pycharm", "webstorm",
-            "goland", "clion", "phpstorm", "rider", "rubymine", "fleet",
-            "eclipse", "atom", "ptyhost", "cursor", "windsurf", "code", "opencode"
-        ]
-        if exactNames.contains(lowerName) { return true }
-
-        // Prefix/substring matches safe enough to avoid false positives
-        let namePrefixes = ["antigravity", "vscode", "code helper", "cursor", "windsurf", "opencode"]
-        for prefix in namePrefixes {
-            if lowerName.hasPrefix(prefix) { return true }
-        }
-
-        if lowerCmd.contains("/extensions/antigravity/") ||
-           lowerCmd.contains("language_server_macos_arm") ||
-           lowerCmd.contains("language_server") ||
-           lowerCmd.contains("--extension_server_port") ||
-           lowerName.contains("extensionhost") ||
-           lowerName.contains("ptyhost") ||
-           lowerCmd.contains("extensionhost") ||
-           lowerCmd.contains("opencode") {
-            return true
-        }
-
-        let ideBundlePaths = [
-            "antigravity ide.app", "antigravity.app", "cursor.app", "visual studio code.app", "code.app",
-            "zed.app", "windsurf.app", "fleet.app", "webstorm.app", "pycharm.app",
-            "goland.app", "clion.app", "phpstorm.app", "rider.app", "rubymine.app",
-            "idea.app", "xcode.app", "opencode.app"
-        ]
-        for bundlePath in ideBundlePaths {
-            if lowerCmd.contains(bundlePath) { return true }
-        }
-
-        return false
+        SystemPortProtection.isEditorHelperProcess(name: name, command: command)
+            || SystemPortProtection.isAppBundleExecutable(command)
     }
 
     public static func isGUIApplication(pid: pid_t) -> Bool {

@@ -20,19 +20,6 @@ public enum SystemPortProtection {
         "com.apple.identityservicesd"
     ]
 
-    public static let criticalIDEBundleIds: Set<String> = [
-        "com.google.antigravity-ide",
-        "com.microsoft.VSCode",
-        "com.microsoft.VSCodeInsiders",
-        "com.todesktop.230313mzl4w4u92",
-        "com.exafunction.windsurf",
-        "dev.zed.Zed",
-        "com.apple.dt.Xcode",
-        "com.sublimetext.4",
-        "com.sublimetext.3",
-        "ai.opencode.desktop"
-    ]
-
     public static let criticalSystemProcesses: Set<String> = [
         "launchd",
         "kernel_task",
@@ -54,15 +41,17 @@ public enum SystemPortProtection {
         "windowserver",
         "syslogd",
         "diskarbitrationd",
-        "powerd",
-        "antigravity",
-        "antigravity-ide",
-        "antigravity helper",
-        "code helper",
-        "language_server_macos_arm",
-        "language_server",
-        "ptyhost",
-        "opencode"
+        "powerd"
+    ]
+
+    public static let protectedPathPrefixes: [String] = [
+        "/System/Library/PrivateFrameworks/",
+        "/System/Library/CoreServices/",
+        "/System/Library/",
+        "/System/Volumes/Preboot/",
+        "/Library/Apple/System/",
+        "/usr/libexec/",
+        "/usr/sbin/"
     ]
 
     public static let supportedKillXBundleIds: Set<String> = [
@@ -70,6 +59,27 @@ public enum SystemPortProtection {
         "com.killx.app",
         "com.coreify.killx"
     ]
+
+    public static func isEditorHelperProcess(name: String, command: String = "") -> Bool {
+        let n = name.lowercased()
+        let c = command.lowercased()
+        let haystack = n + " " + c
+        if haystack.contains("language_server") || haystack.contains("languageserver") { return true }
+        if haystack.contains("extensionhost") || haystack.contains("extension_host") { return true }
+        if haystack.contains("ptyhost") || haystack.contains("pty_host") { return true }
+        if n.contains("helper") && c.contains(".app/") { return true }
+        return false
+    }
+
+    public static func isAppBundleExecutable(_ command: String) -> Bool {
+        guard let first = command.split(separator: " ").first else { return false }
+        return first.lowercased().contains(".app/")
+    }
+
+    public static func isUserInterfaceApp(pid: pid_t) -> Bool {
+        guard pid > 1 else { return false }
+        return NSRunningApplication(processIdentifier: pid)?.activationPolicy == .regular
+    }
 
     public static func isSystemProtected(
         pid: pid_t,
@@ -83,57 +93,25 @@ public enum SystemPortProtection {
 
         let bid = (bundleIdentifier ?? "").lowercased()
         if !bid.isEmpty {
-            if supportedKillXBundleIds.contains(bid) {
-                return true
-            }
-            if criticalAppleBundleIds.contains(bid) {
-                return true
-            }
-            if criticalIDEBundleIds.contains(bid) ||
-               bid.contains("antigravity") ||
-               bid.contains("vscode") ||
-               bid.contains("opencode") ||
-               bid.hasPrefix("com.jetbrains.") {
-                return true
-            }
+            if supportedKillXBundleIds.contains(bid) { return true }
+            if criticalAppleBundleIds.contains(bid) { return true }
         }
 
         let lowerName = processName.lowercased()
         if !lowerName.isEmpty {
             if lowerName == "killx" { return true }
-            if criticalSystemProcesses.contains(lowerName) {
-                return true
-            }
-            if lowerName.hasPrefix("antigravity") || lowerName.hasPrefix("code helper") || lowerName.contains("opencode") {
-                return true
-            }
+            if criticalSystemProcesses.contains(lowerName) { return true }
         }
 
         let path = (executablePath ?? "").isEmpty ? resolvedPath(for: pid) : (executablePath ?? "")
         if !path.isEmpty {
-            let lowerPath = path.lowercased()
-            if path.hasPrefix("/System/Library/PrivateFrameworks/")
-                || path.hasPrefix("/System/Library/CoreServices/")
-                || path.hasPrefix("/System/Library/")
-                || path.hasPrefix("/System/Volumes/Preboot/")
-                || path.hasPrefix("/Library/Apple/System/")
-                || path.hasPrefix("/usr/libexec/")
-                || path.hasPrefix("/usr/sbin/") {
-                return true
-            }
-            if lowerPath.contains("antigravity ide.app") ||
-               lowerPath.contains("antigravity.app") ||
-               lowerPath.contains("/extensions/antigravity/") ||
-               lowerPath.contains("visual studio code.app") ||
-               lowerPath.contains("cursor.app") ||
-               lowerPath.contains("windsurf.app") ||
-               lowerPath.contains("xcode.app") ||
-               lowerPath.contains("opencode.app") ||
-               lowerPath.contains("/.opencode/") ||
-               lowerPath.contains("language_server_macos_arm") {
+            for prefix in protectedPathPrefixes where path.hasPrefix(prefix) {
                 return true
             }
         }
+
+        if isUserInterfaceApp(pid: pid) { return true }
+        if isEditorHelperProcess(name: processName, command: path) { return true }
 
         return false
     }
