@@ -76,7 +76,7 @@ public final class PortService {
                 executablePath: appResolution.executablePath
             )
 
-            if isProtected {
+            if isProtected && docker == nil {
                 continue
             }
 
@@ -110,13 +110,13 @@ public final class PortService {
 
     @discardableResult
     public func killPort(_ port: PortInfo, force: Bool = false, tree: Bool = false) async -> Bool {
-        if port.isSystemProtected || SystemPortProtection.isSystemProtected(port: port) {
-            return false
-        }
-
         if let docker = port.docker {
             let timeout = max(1, ConfigStore.shared.config.dockerStopTimeout)
             return await DockerService.shared.stopContainer(containerId: docker.containerId, force: force, timeoutSeconds: timeout)
+        }
+
+        if port.isSystemProtected || SystemPortProtection.isSystemProtected(port: port) {
+            return false
         }
 
         let shouldKillTree = tree || ConfigStore.shared.config.treeKillByDefault

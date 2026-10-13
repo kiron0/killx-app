@@ -72,8 +72,7 @@ public enum SystemPortProtection {
     }
 
     public static func isAppBundleExecutable(_ command: String) -> Bool {
-        guard let first = command.split(separator: " ").first else { return false }
-        return first.lowercased().contains(".app/")
+        command.contains(".app/")
     }
 
     public static func isUserInterfaceApp(pid: pid_t) -> Bool {
@@ -112,6 +111,7 @@ public enum SystemPortProtection {
 
         if isUserInterfaceApp(pid: pid) { return true }
         if isEditorHelperProcess(name: processName, command: path) { return true }
+        if isAppBundleExecutable(path) { return true }
 
         return false
     }

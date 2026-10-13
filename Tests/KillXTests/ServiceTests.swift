@@ -199,5 +199,15 @@ struct SystemPortProtectionTests {
         #expect(!PortService.isHostBoundary(pid: 9999, name: "bun"))
         #expect(!PortService.isHostBoundary(pid: 9999, name: "node"))
     }
-}
 
+    @Test("App-bundle processes are app-internal hosts, not dev servers")
+    func testAppBundleHost() {
+        let claude = "/Users/x/Library/Application Support/Claude/claude-code/2.0/claude.app/Contents/MacOS/claude"
+        #expect(SystemPortProtection.isAppBundleExecutable(claude))
+        #expect(SystemPortProtection.isSystemProtected(pid: 9999, processName: "claude", executablePath: claude))
+        #expect(PortService.isIDEOrEditor("claude", command: claude))
+        #expect(SystemPortProtection.isAppBundleExecutable("/Applications/Docker.app/Contents/MacOS/com.docker.backend"))
+        #expect(!SystemPortProtection.isAppBundleExecutable("/opt/homebrew/bin/node"))
+        #expect(!SystemPortProtection.isSystemProtected(pid: 9999, processName: "node", executablePath: "/opt/homebrew/bin/node"))
+    }
+}
