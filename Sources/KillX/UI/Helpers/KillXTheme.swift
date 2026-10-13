@@ -12,12 +12,8 @@ enum KillXTheme {
         endPoint: .bottom
     )
     static let skyGradient = accentGradient
-    static let forceColor = Color(red: 99/255, green: 102/255, blue: 241/255)
-    static let forceGradient = LinearGradient(
-        colors: [Color(red: 129/255, green: 140/255, blue: 248/255), Color(red: 79/255, green: 70/255, blue: 229/255)],
-        startPoint: .top,
-        endPoint: .bottom
-    )
+    static let forceColor = accent
+    static let forceGradient = accentGradient
 
     static let windowBackgroundColor = Color(NSColor.windowBackgroundColor)
     static let windowBackgroundNSColor = NSColor.windowBackgroundColor
