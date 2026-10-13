@@ -301,8 +301,10 @@ final class AppListViewModel: ObservableObject {
         if ok {
             SoundService.playKillSingle()
             showToastMessage("Killed :\(port.port) (\(port.processName))")
-            await refresh()
+        } else {
+            showToastMessage("Couldn't free :\(port.port) — it re-opened. Use Tree Kill", isError: true)
         }
+        await refresh()
     }
 
     func killSelectedPorts(force: Bool = false, tree: Bool = false) async {
@@ -318,8 +320,10 @@ final class AppListViewModel: ObservableObject {
         if count > 0 {
             SoundService.playKillAll()
             showToastMessage("Killed \(count) ports")
-            await refresh()
+        } else {
+            showToastMessage("No ports freed — listeners re-opened. Use Tree Kill", isError: true)
         }
+        await refresh()
     }
 
     func quitAll(force: Bool = false) async {
@@ -370,8 +374,10 @@ final class AppListViewModel: ObservableObject {
         if count > 0 {
             SoundService.playKillAll()
             showToastMessage("Force killed \(count) ports")
-            await refresh()
+        } else {
+            showToastMessage("No ports freed — listeners re-opened. Use Tree Kill", isError: true)
         }
+        await refresh()
     }
 
     func tracePort(_ port: PortInfo) async {

@@ -186,8 +186,10 @@ struct PortDetailsView: View {
             if ok {
                 SoundService.playKillSingle()
                 AppListViewModel.shared.showToastMessage("Killed :\(port.port) (\(port.processName))")
-                await AppListViewModel.shared.refresh()
+            } else {
+                AppListViewModel.shared.showToastMessage("Couldn't free :\(port.port) — it re-opened. Use Tree Kill", isError: true)
             }
+            await AppListViewModel.shared.refresh()
             onClose()
         }
     }

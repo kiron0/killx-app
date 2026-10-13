@@ -120,23 +120,68 @@ public final class PortService {
         }
 
         let shouldKillTree = tree || ConfigStore.shared.config.treeKillByDefault
+        let signalled: Bool
         if shouldKillTree {
-            return await terminateProcessTree(pid: port.pid, force: force)
+            signalled = await terminateProcessTree(pid: port.pid, force: force)
+        } else {
+            signalled = await signalProcess(pid: port.pid, force: force)
         }
+        guard signalled else { return false }
 
+        return await waitUntilPortReleased(port.port, timeout: shouldKillTree ? 2.0 : 1.5)
+    }
+    private func signalProcess(pid: pid_t, force: Bool) async -> Bool {
         let sig = force ? SIGKILL : SIGTERM
-        let res = Darwin.kill(port.pid, sig)
-        if res == 0 {
-            if !force {
-                for _ in 0..<10 {
-                    try? await Task.sleep(nanoseconds: 100_000_000)
-                    if Darwin.kill(port.pid, 0) != 0 { return true }
-                }
-                _ = Darwin.kill(port.pid, SIGKILL)
+        guard Darwin.kill(pid, sig) == 0 else { return false }
+        if force { return true }
+        for _ in 0..<10 {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            if Darwin.kill(pid, 0) != 0 { return true }
+        }
+        _ = Darwin.kill(pid, SIGKILL)
+        return true
+    }
+    private func waitUntilPortReleased(_ port: Int, timeout: TimeInterval) async -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        var consecutiveFree = 0
+        while Date() < deadline {
+            if await isPortListening(port) {
+                consecutiveFree = 0
+            } else {
+                consecutiveFree += 1
+                if consecutiveFree >= 2 { return true }
             }
-            return true
+            try? await Task.sleep(nanoseconds: 200_000_000)
         }
         return false
+    }
+
+    private func isPortListening(_ port: Int) async -> Bool {
+        guard port > 0, port <= 65535 else { return false }
+        guard let out = await runLsofListeningPids(port: port) else { return false }
+        return out.split(whereSeparator: { $0.isNewline || $0 == " " }).contains { Int($0) != nil }
+    }
+
+    private func runLsofListeningPids(port: Int) async -> String? {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let proc = Process()
+                proc.executableURL = URL(fileURLWithPath: "/usr/sbin/lsof")
+                proc.arguments = ["-nP", "-iTCP:\(port)", "-sTCP:LISTEN", "-t"]
+                let pipe = Pipe()
+                proc.standardOutput = pipe
+                proc.standardError = Pipe()
+
+                do {
+                    try proc.run()
+                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                    proc.waitUntilExit()
+                    continuation.resume(returning: String(data: data, encoding: .utf8))
+                } catch {
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
     }
 
     @discardableResult
