@@ -7,6 +7,7 @@ public final class DockerService {
     private let lock = NSLock()
     private var cachedContainers: [DockerInfo] = []
     private var lastFetch: Date?
+    private var dockerUnavailableUntil: Date?
 
     private func readCache() -> (containers: [DockerInfo], last: Date)? {
         lock.lock()
@@ -22,20 +23,40 @@ public final class DockerService {
         lastFetch = Date()
     }
 
+    private func unavailableUntil() -> Date? {
+        lock.lock()
+        defer { lock.unlock() }
+        return dockerUnavailableUntil
+    }
+
+    private func markUnavailable(seconds: TimeInterval) {
+        lock.lock()
+        defer { lock.unlock() }
+        dockerUnavailableUntil = Date().addingTimeInterval(seconds)
+    }
+
     public func fetchContainers(forceRefresh: Bool = false) async -> [DockerInfo] {
         if !forceRefresh, let cache = readCache(), Date().timeIntervalSince(cache.last) < 2.0 {
             return cache.containers
         }
-
-        var output = await runCommand(executable: "/usr/local/bin/docker", arguments: ["ps", "--format", "{{json .}}"])
-        if output == nil {
-            output = await runCommand(executable: "/opt/homebrew/bin/docker", arguments: ["ps", "--format", "{{json .}}"])
+        if !forceRefresh, let until = unavailableUntil(), Date() < until {
+            return readCache()?.containers ?? []
         }
-        if output == nil {
-            output = await runCommand(executable: "docker", arguments: ["ps", "--format", "{{json .}}"])
+
+        let paths = ["/usr/local/bin/docker", "/opt/homebrew/bin/docker", "docker"]
+        var output: String?
+        var binaryPresent = false
+        for path in paths {
+            if path.hasPrefix("/") {
+                guard FileManager.default.isExecutableFile(atPath: path) else { continue }
+                binaryPresent = true
+            }
+            output = await runCommand(executable: path, arguments: ["ps", "--format", "{{json .}}"])
+            if output != nil { break }
         }
 
         guard let output = output, !output.isEmpty else {
+            markUnavailable(seconds: binaryPresent ? 15 : 120)
             writeCache([])
             return []
         }

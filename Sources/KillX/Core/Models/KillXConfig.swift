@@ -22,6 +22,12 @@ struct KillXConfig: Codable, Equatable {
         set { confirmKill = newValue }
     }
 
+    private enum CodingKeys: String, CodingKey {
+        case excludePorts, force, treeKillByDefault, defaultSelectAll, autoUpdate
+        case confirmKill, playSounds, disableTips, sortBy, dockerStopTimeout
+        case liquidGlassEnabled
+    }
+
     enum ForceMode: String, Codable, Equatable { case normal, force }
 
     enum SortBy: String, Codable, Equatable, CaseIterable {
@@ -59,5 +65,23 @@ struct KillXConfig: Codable, Equatable {
             dockerStopTimeout: 5,
             liquidGlassEnabled: true
         )
+    }
+}
+
+extension KillXConfig {
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        let d = KillXConfig.default
+        excludePorts = (try? c.decodeIfPresent([Int].self, forKey: .excludePorts)) ?? d.excludePorts
+        force = (try? c.decodeIfPresent(ForceMode.self, forKey: .force)) ?? d.force
+        treeKillByDefault = (try? c.decodeIfPresent(Bool.self, forKey: .treeKillByDefault)) ?? d.treeKillByDefault
+        defaultSelectAll = (try? c.decodeIfPresent(Bool.self, forKey: .defaultSelectAll)) ?? d.defaultSelectAll
+        autoUpdate = (try? c.decodeIfPresent(Bool.self, forKey: .autoUpdate)) ?? d.autoUpdate
+        confirmKill = (try? c.decodeIfPresent(Bool.self, forKey: .confirmKill)) ?? d.confirmKill
+        playSounds = (try? c.decodeIfPresent(Bool.self, forKey: .playSounds)) ?? d.playSounds
+        disableTips = (try? c.decodeIfPresent(Bool.self, forKey: .disableTips)) ?? d.disableTips
+        sortBy = (try? c.decodeIfPresent(SortBy.self, forKey: .sortBy)) ?? d.sortBy
+        dockerStopTimeout = (try? c.decodeIfPresent(Int.self, forKey: .dockerStopTimeout)) ?? d.dockerStopTimeout
+        liquidGlassEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .liquidGlassEnabled)) ?? d.liquidGlassEnabled
     }
 }

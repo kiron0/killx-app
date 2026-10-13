@@ -32,7 +32,7 @@ enum SettingsTab: String, CaseIterable {
 
     var toolbarImage: NSImage? {
         if let img = AssetImages.load(iconName) {
-            let copy = img.copy() as! NSImage
+            let copy = img.copy() as? NSImage ?? img
             copy.size = NSSize(width: 19, height: 19)
             copy.isTemplate = true
             return copy

@@ -22,8 +22,6 @@ final class ConfigStore: ObservableObject {
         guard let json = try? JSONEncoder().encode(config) else { return }
         UserDefaults.standard.set(json, forKey: Self.userDefaultsKey)
 
-        // Only re-sort / resize when list-affecting settings changed;
-        // plain toggles don't need a port rescan.
         let current = (config.excludePorts, config.sortBy)
         guard lastListConfig == nil || lastListConfig! != current else { return }
         lastListConfig = current
@@ -38,9 +36,9 @@ final class ConfigStore: ObservableObject {
     func addExcludedPorts(_ ports: [Int]) -> Int {
         var added = 0
         var exclude = config.excludePorts
-        let currentSet = Set(exclude)
+        var currentSet = Set(exclude)
         for p in ports where p > 0 && p <= 65535 {
-            if !currentSet.contains(p) && !exclude.contains(p) {
+            if currentSet.insert(p).inserted {
                 exclude.append(p)
                 added += 1
             }

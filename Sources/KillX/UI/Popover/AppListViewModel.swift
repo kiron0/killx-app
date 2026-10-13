@@ -150,7 +150,6 @@ final class AppListViewModel: ObservableObject {
 
         let fetchedPorts = await PortService.shared.fetchListeningPorts()
         guard gen == fetchGeneration else {
-            isLoading = false
             return
         }
         ports = sort(ports: fetchedPorts)
@@ -294,6 +293,8 @@ final class AppListViewModel: ObservableObject {
             showToastMessage("Port is protected by system", isError: true)
             return
         }
+        pendingPortIds.insert(port.id)
+        defer { pendingPortIds.remove(port.id) }
         let ok = await PortService.shared.killPort(port, force: force, tree: tree)
         if ok {
             SoundService.playKillSingle()
@@ -305,6 +306,12 @@ final class AppListViewModel: ObservableObject {
     func killSelectedPorts(force: Bool = false, tree: Bool = false) async {
         let targets = ports.filter { selectedPorts.contains($0.id) && !$0.isSystemProtected }
         guard !targets.isEmpty else { return }
+        isBatchKilling = true
+        pendingPortIds.formUnion(targets.map(\.id))
+        defer {
+            isBatchKilling = false
+            pendingPortIds.subtract(targets.map(\.id))
+        }
         let count = await PortService.shared.killMultiplePorts(targets, force: force, tree: tree)
         if count > 0 {
             SoundService.playKillAll()
@@ -351,6 +358,12 @@ final class AppListViewModel: ObservableObject {
     func forceKillAll() async {
         let targets = ports.filter { !$0.isSystemProtected }
         guard !targets.isEmpty else { return }
+        isBatchKilling = true
+        pendingPortIds.formUnion(targets.map(\.id))
+        defer {
+            isBatchKilling = false
+            pendingPortIds.subtract(targets.map(\.id))
+        }
         let count = await PortService.shared.killMultiplePorts(targets, force: true, tree: configStore.config.treeKillByDefault)
         if count > 0 {
             SoundService.playKillAll()
