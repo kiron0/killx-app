@@ -6,8 +6,9 @@ final class ConfigStore: ObservableObject {
     @Published var config: KillXConfig = .default
 
     private static let userDefaultsKey = "KillXConfig"
+    private var lastListConfig: (exclude: [Int], sort: KillXConfig.SortBy)?
 
-    private init() { load() }
+    private init() { load(); lastListConfig = (config.excludePorts, config.sortBy) }
 
     func load() {
         guard let data = UserDefaults.standard.data(forKey: Self.userDefaultsKey),
@@ -20,8 +21,15 @@ final class ConfigStore: ObservableObject {
     func save() {
         guard let json = try? JSONEncoder().encode(config) else { return }
         UserDefaults.standard.set(json, forKey: Self.userDefaultsKey)
+
+        // Only re-sort / resize when list-affecting settings changed;
+        // plain toggles don't need a port rescan.
+        let current = (config.excludePorts, config.sortBy)
+        guard lastListConfig == nil || lastListConfig! != current else { return }
+        lastListConfig = current
+
         Task { @MainActor in
-            await AppListViewModel.shared.refresh()
+            await AppListViewModel.shared.resort()
             StatusItemController.shared?.updatePopoverSize()
         }
     }

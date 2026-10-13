@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 struct KillConfirmationRequest: Identifiable {
-    var id: String { "\(title)-\(message)" }
+    let id = UUID()
     let title: String
     let message: String
     let confirmButtonTitle: String
@@ -45,6 +45,9 @@ final class AppListViewModel: ObservableObject {
     @Published var isBatchKilling: Bool = false
 
     private var hasInitializedSelection = false
+    private var toastTask: Task<Void, Never>?
+    private var refreshTask: Task<Void, Never>?
+    private var fetchGeneration = 0
 
     private let quotes = [
         "Find and kill the process using a port ⚡",
@@ -67,6 +70,7 @@ final class AppListViewModel: ObservableObject {
         if let monitor = flagsMonitor {
             NSEvent.removeMonitor(monitor)
         }
+        toastTask?.cancel()
     }
 
     private func startModifierMonitor() {
@@ -83,19 +87,17 @@ final class AppListViewModel: ObservableObject {
     }
 
     var filteredPorts: [PortInfo] {
-        var list = ports.filter { !$0.isSystemProtected }
-        let excluded = Set(configStore.config.excludePorts)
-        list = list.filter { !excluded.contains($0.port) }
-
+        let excluded = configStore.config.excludePorts
         let q = searchQuery.trimmingCharacters(in: .whitespaces).lowercased()
-        guard !q.isEmpty else { return list }
-        return list.filter {
-            "\($0.port)".contains(q) ||
-            $0.displayAppName.lowercased().contains(q) ||
-            $0.processName.lowercased().contains(q) ||
-            $0.command.lowercased().contains(q) ||
-            ($0.docker?.name.lowercased().contains(q) == true) ||
-            ($0.cwd?.lowercased().contains(q) == true)
+        return ports.filter { port in
+            if port.isSystemProtected || excluded.contains(port.port) { return false }
+            guard !q.isEmpty else { return true }
+            return "\(port.port)".contains(q) ||
+                port.displayAppName.lowercased().contains(q) ||
+                port.processName.lowercased().contains(q) ||
+                port.command.lowercased().contains(q) ||
+                (port.docker?.name.lowercased().contains(q) == true) ||
+                (port.cwd?.lowercased().contains(q) == true)
         }
     }
 
@@ -142,9 +144,15 @@ final class AppListViewModel: ObservableObject {
 
     func refresh() async {
         isLoading = true
+        fetchGeneration += 1
+        let gen = fetchGeneration
         let selectedAllBeforeRefresh = isAllSelected
 
         let fetchedPorts = await PortService.shared.fetchListeningPorts()
+        guard gen == fetchGeneration else {
+            isLoading = false
+            return
+        }
         ports = sort(ports: fetchedPorts)
 
         let validPortIds = Set(ports.map(\.id))
@@ -170,11 +178,20 @@ final class AppListViewModel: ObservableObject {
 
     func updateLiveStats() async {
         guard !isLoading else { return }
+        fetchGeneration += 1
+        let gen = fetchGeneration
         let fetchedPorts = await PortService.shared.fetchListeningPorts()
+        guard gen == fetchGeneration else { return }
         ports = sort(ports: fetchedPorts)
 
         let validPortIds = Set(ports.map(\.id))
         selectedPorts = selectedPorts.intersection(validPortIds)
+    }
+
+    func resort() async {
+        fetchGeneration += 1
+        ports = sort(ports: ports)
+        selectedPorts = selectedPorts.intersection(Set(ports.map(\.id)))
     }
 
     func confirmAndKillPort(_ port: PortInfo, force: Bool = false, tree: Bool = false) {
@@ -363,8 +380,10 @@ final class AppListViewModel: ObservableObject {
 
     private func triggerToast() {
         showToast = true
-        Task { @MainActor in
+        toastTask?.cancel()
+        toastTask = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard !Task.isCancelled else { return }
             showToast = false
         }
     }

@@ -19,9 +19,18 @@ public final class PortService {
     public static func isDevProcess(name: String, command: String = "") -> Bool {
         let lowerName = name.lowercased().replacingOccurrences(of: ".exe", with: "")
         if devProcessNames.contains(lowerName) { return true }
-        let lowerCmd = command.lowercased()
-        for devName in devProcessNames {
-            if lowerCmd.contains(devName) { return true }
+        guard !command.isEmpty else { return false }
+        // Token-based match so short names ("go", "air", "next") don't false-positive
+        // on substrings like "google-chrome", "airport", "nextcloud".
+        let tokens = command.lowercased().split(whereSeparator: { $0.isWhitespace })
+        for token in tokens {
+            let base = token.split(separator: "/").last.map(String.init) ?? String(token)
+            let cleaned = base.trimmingCharacters(in: CharacterSet(charactersIn: "\"'"))
+            if devProcessNames.contains(cleaned) { return true }
+            if let dot = cleaned.firstIndex(of: ".") {
+                let stem = String(cleaned[..<dot])
+                if devProcessNames.contains(stem) { return true }
+            }
         }
         return false
     }
@@ -32,11 +41,15 @@ public final class PortService {
         if parsed.isEmpty { return [] }
 
         let pids = Array(Set(parsed.map(\.pid)))
-        let commandMap = await fetchCommandLines(for: pids)
-        let cwdMap = await fetchCwds(for: pids)
-        let cpuMap = fetchCpuUsages()
-        let dockerContainers = await DockerService.shared.fetchContainers()
         let allProcs = await fetchAllProcesses()
+        let cwdMap = await fetchCwds(for: pids)
+        let dockerContainers = await DockerService.shared.fetchContainers()
+
+        var dockerByPort: [Int: DockerInfo] = [:]
+        dockerByPort.reserveCapacity(dockerContainers.count)
+        for container in dockerContainers {
+            dockerByPort[container.publishedPort] = container
+        }
 
         var results: [PortInfo] = []
         var seenKeys = Set<String>()
@@ -46,12 +59,13 @@ public final class PortService {
             if seenKeys.contains(key) { continue }
             seenKeys.insert(key)
 
-            let cmd = commandMap[item.pid] ?? item.process
-            let cwd = cwdMap[item.pid]
-            let cpu = cpuMap[item.pid] ?? 0.0
+            let rawProc = allProcs[item.pid]
+            let cmd = rawProc?.command ?? item.process
+            let cwd = cwdMap[item.pid] ?? rawProc?.cwd
+            let cpu = rawProc?.cpuUsage ?? 0.0
             let memory = memoryUsage(pid: item.pid)
 
-            let docker = dockerContainers.first(where: { $0.publishedPort == item.port })
+            let docker = dockerByPort[item.port]
             let appResolution = resolveApp(pid: item.pid, processName: item.process, command: cmd, docker: docker, allProcs: allProcs)
 
             let ownBundleId = NSRunningApplication(processIdentifier: item.pid)?.bundleIdentifier ?? appFromProcPath(pid: item.pid)?.bundleId
@@ -101,7 +115,8 @@ public final class PortService {
         }
 
         if let docker = port.docker {
-            return await DockerService.shared.stopContainer(containerId: docker.containerId, force: force)
+            let timeout = max(1, ConfigStore.shared.config.dockerStopTimeout)
+            return await DockerService.shared.stopContainer(containerId: docker.containerId, force: force, timeoutSeconds: timeout)
         }
 
         let shouldKillTree = tree || ConfigStore.shared.config.treeKillByDefault
@@ -136,6 +151,10 @@ public final class PortService {
 
     public func traceProcessTree(pid: pid_t) async -> [ProcessTreeNodeInfo] {
         let allProcs = await fetchAllProcesses()
+        return Self.buildAncestry(pid: pid, allProcs: allProcs)
+    }
+
+    static func buildAncestry(pid: pid_t, allProcs: [pid_t: RawProcessItem]) -> [ProcessTreeNodeInfo] {
         var ancestry: [ProcessTreeNodeInfo] = []
         var seen = Set<pid_t>()
 
@@ -188,7 +207,7 @@ public final class PortService {
         }
 
         let allProcs = await fetchAllProcesses()
-        let ancestry = await traceProcessTree(pid: pid)
+        let ancestry = Self.buildAncestry(pid: pid, allProcs: allProcs)
 
         let rootPid = getSupervisorRootPid(ancestry: ancestry) ?? pid
         if rootPid <= 1 || SystemPortProtection.isSystemProtected(pid: rootPid) {
@@ -321,39 +340,6 @@ public final class PortService {
         }
     }
 
-    private func fetchCommandLines(for pids: [pid_t]) async -> [pid_t: String] {
-        guard !pids.isEmpty else { return [:] }
-        return await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                let proc = Process()
-                proc.executableURL = URL(fileURLWithPath: "/bin/ps")
-                proc.arguments = ["-eo", "pid,command"]
-                let pipe = Pipe()
-                proc.standardOutput = pipe
-                proc.standardError = Pipe()
-
-                var map: [pid_t: String] = [:]
-                do {
-                    try proc.run()
-                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                    proc.waitUntilExit()
-                    if let text = String(data: data, encoding: .utf8) {
-                        for line in text.components(separatedBy: "\n") {
-                            let trimmed = line.trimmingCharacters(in: .whitespaces)
-                            let parts = trimmed.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
-                            if parts.count >= 2, let pid = pid_t(parts[0]) {
-                                map[pid] = String(parts[1])
-                            }
-                        }
-                    }
-                    continuation.resume(returning: map)
-                } catch {
-                    continuation.resume(returning: [:])
-                }
-            }
-        }
-    }
-
     private func fetchCwds(for pids: [pid_t]) async -> [pid_t: String] {
         guard !pids.isEmpty else { return [:] }
         return await withCheckedContinuation { continuation in
@@ -395,6 +381,7 @@ public final class PortService {
         let user: String
         let name: String
         let command: String
+        let cpuUsage: Double
         var cwd: String?
         var startTime: String?
     }
@@ -404,7 +391,7 @@ public final class PortService {
             DispatchQueue.global(qos: .userInitiated).async {
                 let proc = Process()
                 proc.executableURL = URL(fileURLWithPath: "/bin/ps")
-                proc.arguments = ["-axo", "pid=,ppid=,user=,ucomm=,args="]
+                proc.arguments = ["-axo", "pid=,ppid=,user=,ucomm=,pcpu=,args="]
                 let pipe = Pipe()
                 proc.standardOutput = pipe
                 proc.standardError = Pipe()
@@ -419,13 +406,14 @@ public final class PortService {
                         for line in lines {
                             let trimmed = line.trimmingCharacters(in: .whitespaces)
                             guard !trimmed.isEmpty else { continue }
-                            let parts = trimmed.split(separator: " ", maxSplits: 4, omittingEmptySubsequences: true)
-                            if parts.count >= 4,
+                            let parts = trimmed.split(separator: " ", maxSplits: 5, omittingEmptySubsequences: true)
+                            if parts.count >= 5,
                                let pid = pid_t(parts[0]),
                                let ppid = pid_t(parts[1]) {
                                 let user = String(parts[2])
                                 let ucomm = String(parts[3])
-                                let command = parts.count > 4 ? String(parts[4]).trimmingCharacters(in: .whitespaces) : ucomm
+                                let cpu = Double(parts[4]) ?? 0
+                                let command = parts.count > 5 ? String(parts[5]).trimmingCharacters(in: .whitespaces) : ucomm
 
                                 map[pid] = RawProcessItem(
                                     pid: pid,
@@ -433,6 +421,7 @@ public final class PortService {
                                     user: user,
                                     name: ucomm,
                                     command: command.isEmpty ? ucomm : command,
+                                    cpuUsage: cpu,
                                     cwd: nil,
                                     startTime: nil
                                 )
@@ -465,18 +454,23 @@ public final class PortService {
     }
 
     private func getAllDescendantPids(rootPid: pid_t, procs: [pid_t: RawProcessItem]) -> [pid_t] {
+        var childrenMap: [pid_t: [pid_t]] = [:]
+        childrenMap.reserveCapacity(procs.count)
+        for (pid, proc) in procs {
+            childrenMap[proc.ppid, default: []].append(pid)
+        }
+
         var pids: [pid_t] = []
         var queue = [rootPid]
         var seen = Set<pid_t>([rootPid])
 
         while !queue.isEmpty {
             let current = queue.removeFirst()
-            for (pid, proc) in procs {
-                if proc.ppid == current && !seen.contains(pid) {
-                    seen.insert(pid)
-                    pids.append(pid)
-                    queue.append(pid)
-                }
+            guard let children = childrenMap[current] else { continue }
+            for pid in children where !seen.contains(pid) {
+                seen.insert(pid)
+                pids.append(pid)
+                queue.append(pid)
             }
         }
         return pids
@@ -586,32 +580,6 @@ public final class PortService {
             return UInt64(info.pti_resident_size)
         }
         return 0
-    }
-
-    private func fetchCpuUsages() -> [pid_t: Double] {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/bin/ps")
-        process.arguments = ["-A", "-o", "pid,%cpu"]
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = Pipe()
-
-        var usages: [pid_t: Double] = [:]
-        do {
-            try process.run()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            process.waitUntilExit()
-            if let output = String(data: data, encoding: .utf8) {
-                let lines = output.components(separatedBy: "\n")
-                for line in lines.dropFirst() {
-                    let parts = line.trimmingCharacters(in: .whitespaces).split(separator: " ", omittingEmptySubsequences: true)
-                    if parts.count >= 2, let pid = pid_t(parts[0]), let cpu = Double(parts[1]) {
-                        usages[pid] = cpu
-                    }
-                }
-            }
-        } catch {}
-        return usages
     }
 
     public struct AppResolution: Sendable {

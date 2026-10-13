@@ -4,12 +4,27 @@ public final class DockerService {
     public static let shared = DockerService()
     private init() {}
 
+    private let lock = NSLock()
     private var cachedContainers: [DockerInfo] = []
     private var lastFetch: Date?
 
+    private func readCache() -> (containers: [DockerInfo], last: Date)? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let last = lastFetch else { return nil }
+        return (cachedContainers, last)
+    }
+
+    private func writeCache(_ containers: [DockerInfo]) {
+        lock.lock()
+        defer { lock.unlock() }
+        cachedContainers = containers
+        lastFetch = Date()
+    }
+
     public func fetchContainers(forceRefresh: Bool = false) async -> [DockerInfo] {
-        if !forceRefresh, let last = lastFetch, Date().timeIntervalSince(last) < 2.0 {
-            return cachedContainers
+        if !forceRefresh, let cache = readCache(), Date().timeIntervalSince(cache.last) < 2.0 {
+            return cache.containers
         }
 
         var output = await runCommand(executable: "/usr/local/bin/docker", arguments: ["ps", "--format", "{{json .}}"])
@@ -21,8 +36,7 @@ public final class DockerService {
         }
 
         guard let output = output, !output.isEmpty else {
-            cachedContainers = []
-            lastFetch = Date()
+            writeCache([])
             return []
         }
 
@@ -50,8 +64,7 @@ public final class DockerService {
             }
         }
 
-        cachedContainers = list
-        lastFetch = Date()
+        writeCache(list)
         return list
     }
 
@@ -88,7 +101,7 @@ public final class DockerService {
                 let portSpec = String(hostPart[hostPart.index(after: lastColon)...])
                 if portSpec.contains("-") {
                     let parts = portSpec.components(separatedBy: "-")
-                    if parts.count == 2, let start = Int(parts[0]), let end = Int(parts[1]) {
+                    if parts.count == 2, let start = Int(parts[0]), let end = Int(parts[1]), start <= end {
                         for p in start...end { result.append(p) }
                     }
                 } else if let p = Int(portSpec) {
