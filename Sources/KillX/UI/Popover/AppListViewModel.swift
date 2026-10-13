@@ -195,25 +195,24 @@ final class AppListViewModel: ObservableObject {
         selectedPorts = selectedPorts.intersection(Set(ports.map(\.id)))
     }
 
-    func confirmAndKillPort(_ port: PortInfo, force: Bool = false, tree: Bool = false) {
+    func confirmAndKillPort(_ port: PortInfo, force: Bool = false) {
         guard !port.isSystemProtected else {
             showToastMessage("Port is protected by system", isError: true)
             return
         }
 
         let isForced = force || isOptionKeyPressed || configStore.config.force == .force
-        let useTree = tree || configStore.config.treeKillByDefault
 
         guard configStore.config.confirmKill else {
-            Task { await killPort(port, force: isForced, tree: useTree) }
+            Task { await killPort(port, force: isForced) }
             return
         }
 
         let title: String
         if isForced {
-            title = useTree ? "Force Tree Kill Port :\(port.port)?" : "Force Kill Port :\(port.port)?"
+            title = "Force Tree Kill Port :\(port.port)?"
         } else {
-            title = useTree ? "Tree Kill Port :\(port.port)?" : "Kill Port :\(port.port)?"
+            title = "Tree Kill Port :\(port.port)?"
         }
 
         var msg = "Process: \(port.processName) (PID \(port.pid))"
@@ -222,7 +221,7 @@ final class AppListViewModel: ObservableObject {
             msg += "\nDirectory: \(displayPath)"
         }
 
-        let confirmTitle = isForced ? "Force Kill" : (useTree ? "Tree Kill" : "Kill")
+        let confirmTitle = isForced ? "Force Tree Kill" : "Tree Kill"
 
         pendingKillConfirmation = KillConfirmationRequest(
             title: title,
@@ -230,36 +229,35 @@ final class AppListViewModel: ObservableObject {
             confirmButtonTitle: confirmTitle,
             isForced: isForced,
             action: { [weak self] in
-                await self?.killPort(port, force: isForced, tree: useTree)
+                await self?.killPort(port, force: isForced)
             }
         )
     }
 
-    func confirmAndKillSelectedPorts(force: Bool = false, tree: Bool = false) {
+    func confirmAndKillSelectedPorts(force: Bool = false) {
         let targets = ports.filter { selectedPorts.contains($0.id) && !$0.isSystemProtected }
         guard !targets.isEmpty else { return }
 
         let isForced = force || isOptionKeyPressed || configStore.config.force == .force
-        let useTree = tree || configStore.config.treeKillByDefault
 
         guard configStore.config.confirmKill else {
-            Task { await killSelectedPorts(force: isForced, tree: useTree) }
+            Task { await killSelectedPorts(force: isForced) }
             return
         }
 
         let count = targets.count
         let title: String
         if isForced {
-            title = useTree ? "Force Tree Kill (\(count)) Ports?" : "Force Kill (\(count)) Ports?"
+            title = "Force Tree Kill (\(count)) Ports?"
         } else {
-            title = useTree ? "Tree Kill (\(count)) Ports?" : "Kill (\(count)) Ports?"
+            title = "Tree Kill (\(count)) Ports?"
         }
 
         let portList = targets.prefix(5).map { ":\($0.port) (\($0.processName))" }.joined(separator: ", ")
         let remainder = targets.count > 5 ? " and \(targets.count - 5) more" : ""
         let msg = "Selected targets: \(portList)\(remainder)"
 
-        let confirmTitle = isForced ? "Force Kill (\(count))" : "Kill (\(count))"
+        let confirmTitle = isForced ? "Force Tree Kill (\(count))" : "Tree Kill (\(count))"
 
         pendingKillConfirmation = KillConfirmationRequest(
             title: title,
@@ -267,29 +265,29 @@ final class AppListViewModel: ObservableObject {
             confirmButtonTitle: confirmTitle,
             isForced: isForced,
             action: { [weak self] in
-                await self?.killSelectedPorts(force: isForced, tree: useTree)
+                await self?.killSelectedPorts(force: isForced)
             }
         )
     }
 
-    func killPort(_ port: PortInfo, force: Bool = false, tree: Bool = false) async {
+    func killPort(_ port: PortInfo, force: Bool = false) async {
         guard !port.isSystemProtected else {
             showToastMessage("Port is protected by system", isError: true)
             return
         }
         pendingPortIds.insert(port.id)
         defer { pendingPortIds.remove(port.id) }
-        let ok = await PortService.shared.killPort(port, force: force, tree: tree)
+        let ok = await PortService.shared.killPort(port, force: force)
         if ok {
             SoundService.playKillSingle()
             showToastMessage("Killed :\(port.port) (\(port.processName))")
         } else {
-            showToastMessage("Couldn't free :\(port.port) — it re-opened. Use Tree Kill", isError: true)
+            showToastMessage("Couldn't free :\(port.port) — it kept re-opening", isError: true)
         }
         await refresh()
     }
 
-    func killSelectedPorts(force: Bool = false, tree: Bool = false) async {
+    func killSelectedPorts(force: Bool = false) async {
         let targets = ports.filter { selectedPorts.contains($0.id) && !$0.isSystemProtected }
         guard !targets.isEmpty else { return }
         isBatchKilling = true
@@ -298,25 +296,24 @@ final class AppListViewModel: ObservableObject {
             isBatchKilling = false
             pendingPortIds.subtract(targets.map(\.id))
         }
-        let count = await PortService.shared.killMultiplePorts(targets, force: force, tree: tree)
+        let count = await PortService.shared.killMultiplePorts(targets, force: force)
         if count > 0 {
             SoundService.playKillAll()
             showToastMessage("Killed \(count) ports")
         } else {
-            showToastMessage("No ports freed — listeners re-opened. Use Tree Kill", isError: true)
+            showToastMessage("No ports freed — listeners kept re-opening", isError: true)
         }
         await refresh()
     }
 
     func quitAll(force: Bool = false) async {
-        confirmAndKillSelectedPorts(force: force, tree: configStore.config.treeKillByDefault)
+        confirmAndKillSelectedPorts(force: force)
     }
 
     func confirmAndForceKillAll() {
         let targets = ports.filter { !$0.isSystemProtected }
         guard !targets.isEmpty else { return }
 
-        let useTree = configStore.config.treeKillByDefault
         let count = targets.count
 
         guard configStore.config.confirmKill else {
@@ -324,7 +321,7 @@ final class AppListViewModel: ObservableObject {
             return
         }
 
-        let title = useTree ? "Force Tree Kill All (\(count)) Ports?" : "Force Kill All (\(count)) Ports?"
+        let title = "Force Tree Kill All (\(count)) Ports?"
         let portList = targets.prefix(5).map { ":\($0.port) (\($0.processName))" }.joined(separator: ", ")
         let remainder = targets.count > 5 ? " and \(targets.count - 5) more" : ""
         let msg = "All targets: \(portList)\(remainder)"
@@ -349,12 +346,12 @@ final class AppListViewModel: ObservableObject {
             isBatchKilling = false
             pendingPortIds.subtract(targets.map(\.id))
         }
-        let count = await PortService.shared.killMultiplePorts(targets, force: true, tree: configStore.config.treeKillByDefault)
+        let count = await PortService.shared.killMultiplePorts(targets, force: true)
         if count > 0 {
             SoundService.playKillAll()
             showToastMessage("Force killed \(count) ports")
         } else {
-            showToastMessage("No ports freed — listeners re-opened. Use Tree Kill", isError: true)
+            showToastMessage("No ports freed — listeners kept re-opening", isError: true)
         }
         await refresh()
     }

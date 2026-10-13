@@ -19,13 +19,11 @@ func createMenubarImage(size: CGFloat) -> NSImage {
     let topY = size * 0.84
     let botY = size * 0.16
     
-    // Vertical stem of K
     let stemRect = CGRect(x: stemX, y: botY, width: stemW, height: topY - botY)
     let stemPath = CGPath(roundedRect: stemRect, cornerWidth: size * 0.03, cornerHeight: size * 0.03, transform: nil)
     ctx.addPath(stemPath)
     ctx.fillPath()
     
-    // Upper diagonal arm of K
     let arm = CGMutablePath()
     arm.move(to: CGPoint(x: stemX + stemW - 0.5, y: size * 0.46))
     arm.addLine(to: CGPoint(x: size * 0.62, y: topY))
@@ -35,7 +33,6 @@ func createMenubarImage(size: CGFloat) -> NSImage {
     ctx.addPath(arm)
     ctx.fillPath()
     
-    // Lightning bolt lower leg (pointing down-right)
     let bolt = CGMutablePath()
     bolt.move(to: CGPoint(x: size * 0.50, y: size * 0.44))
     bolt.addLine(to: CGPoint(x: size * 0.68, y: size * 0.44))
@@ -73,7 +70,6 @@ func createAppIconImage(size: CGFloat) -> NSImage {
     ctx.addPath(path)
     ctx.clip()
     
-    // Background gradient: #1e1e24 to #101014
     let colorSpace = CGColorSpaceCreateDeviceRGB()
     let bgColors = [
         NSColor(red: 28/255, green: 28/255, blue: 34/255, alpha: 1.0).cgColor,
@@ -82,7 +78,6 @@ func createAppIconImage(size: CGFloat) -> NSImage {
     let bgGrad = CGGradient(colorsSpace: colorSpace, colors: bgColors, locations: [0.0, 1.0])!
     ctx.drawLinearGradient(bgGrad, start: CGPoint(x: size/2, y: size), end: CGPoint(x: size/2, y: 0), options: [])
     
-    // Subtle glow under the lightning bolt
     let glowCenter = CGPoint(x: size * 0.68, y: size * 0.30)
     let glowColors = [
         NSColor(red: 56/255, green: 189/255, blue: 248/255, alpha: 0.40).cgColor,
@@ -91,7 +86,6 @@ func createAppIconImage(size: CGFloat) -> NSImage {
     let glowGrad = CGGradient(colorsSpace: colorSpace, colors: glowColors, locations: [0.0, 1.0])!
     ctx.drawRadialGradient(glowGrad, startCenter: glowCenter, startRadius: 0, endCenter: glowCenter, endRadius: size * 0.42, options: [])
     
-    // Inner border stroke
     let insetRect = rect.insetBy(dx: max(1, size * 0.015), dy: max(1, size * 0.015))
     let insetPath = CGPath(roundedRect: insetRect, cornerWidth: cornerRadius * 0.98, cornerHeight: cornerRadius * 0.98, transform: nil)
     ctx.addPath(insetPath)
@@ -99,7 +93,6 @@ func createAppIconImage(size: CGFloat) -> NSImage {
     ctx.setLineWidth(max(1.0, size * 0.015))
     ctx.strokePath()
     
-    // White parts of K
     let stemX = size * 0.22
     let stemW = size * 0.22
     let topY = size * 0.82
@@ -107,13 +100,11 @@ func createAppIconImage(size: CGFloat) -> NSImage {
     
     ctx.setFillColor(NSColor(red: 250/255, green: 250/255, blue: 252/255, alpha: 1.0).cgColor)
     
-    // Stem
     let stemRect = CGRect(x: stemX, y: botY, width: stemW, height: topY - botY)
     let stemP = CGPath(roundedRect: stemRect, cornerWidth: size * 0.02, cornerHeight: size * 0.02, transform: nil)
     ctx.addPath(stemP)
     ctx.fillPath()
     
-    // Upper arm
     let arm = CGMutablePath()
     arm.move(to: CGPoint(x: stemX + stemW - 0.5, y: size * 0.48))
     arm.addLine(to: CGPoint(x: size * 0.64, y: topY))
@@ -123,7 +114,6 @@ func createAppIconImage(size: CGFloat) -> NSImage {
     ctx.addPath(arm)
     ctx.fillPath()
     
-    // Lightning bolt in Sky gradient (down-right)
     let skyColors = [
         NSColor(red: 125/255, green: 211/255, blue: 252/255, alpha: 1.0).cgColor,
         NSColor(red: 56/255, green: 189/255, blue: 248/255, alpha: 1.0).cgColor
@@ -169,7 +159,6 @@ func savePNG(image: NSImage, path: String) {
 
 let iconsDir = FileManager.default.fileExists(atPath: "Support/Icons") ? "Support/Icons" : (FileManager.default.fileExists(atPath: "app/Support/Icons") ? "app/Support/Icons" : ".")
 
-// 1. Generate menubar icons
 let mb1 = createMenubarImage(size: 18)
 savePNG(image: mb1, path: "\(iconsDir)/status-icon.png")
 savePNG(image: mb1, path: "\(iconsDir)/menubar.png")
@@ -178,7 +167,6 @@ let mb2 = createMenubarImage(size: 36)
 savePNG(image: mb2, path: "\(iconsDir)/status-icon@2x.png")
 savePNG(image: mb2, path: "\(iconsDir)/menubar@2x.png")
 
-// 2. Generate app icons for iconset and root icons
 let sizes: [(String, CGFloat)] = [
     ("icon_16x16.png", 16),
     ("icon_16x16@2x.png", 32),

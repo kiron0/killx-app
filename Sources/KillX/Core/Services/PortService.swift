@@ -20,8 +20,6 @@ public final class PortService {
         let lowerName = name.lowercased().replacingOccurrences(of: ".exe", with: "")
         if devProcessNames.contains(lowerName) { return true }
         guard !command.isEmpty else { return false }
-        // Token-based match so short names ("go", "air", "next") don't false-positive
-        // on substrings like "google-chrome", "airport", "nextcloud".
         let tokens = command.lowercased().split(whereSeparator: { $0.isWhitespace })
         for token in tokens {
             let base = token.split(separator: "/").last.map(String.init) ?? String(token)
@@ -109,7 +107,7 @@ public final class PortService {
     }
 
     @discardableResult
-    public func killPort(_ port: PortInfo, force: Bool = false, tree: Bool = false) async -> Bool {
+    public func killPort(_ port: PortInfo, force: Bool = false) async -> Bool {
         if let docker = port.docker {
             let timeout = max(1, ConfigStore.shared.config.dockerStopTimeout)
             return await DockerService.shared.stopContainer(containerId: docker.containerId, force: force, timeoutSeconds: timeout)
@@ -119,17 +117,13 @@ public final class PortService {
             return false
         }
 
-        let shouldKillTree = tree || ConfigStore.shared.config.treeKillByDefault
-        let signalled: Bool
-        if shouldKillTree {
-            signalled = await terminateProcessTree(pid: port.pid, force: force)
-        } else {
-            signalled = await signalProcess(pid: port.pid, force: force)
+        let treeDone = await terminateProcessTree(pid: port.pid, force: force)
+        if !treeDone {
+            guard await signalProcess(pid: port.pid, force: force) else { return false }
         }
-        guard signalled else { return false }
-
-        return await waitUntilPortReleased(port.port, timeout: shouldKillTree ? 2.0 : 1.5)
+        return await waitUntilPortReleased(port.port, timeout: 2.5)
     }
+
     private func signalProcess(pid: pid_t, force: Bool) async -> Bool {
         let sig = force ? SIGKILL : SIGTERM
         guard Darwin.kill(pid, sig) == 0 else { return false }
@@ -141,19 +135,14 @@ public final class PortService {
         _ = Darwin.kill(pid, SIGKILL)
         return true
     }
+
     private func waitUntilPortReleased(_ port: Int, timeout: TimeInterval) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
-        var consecutiveFree = 0
         while Date() < deadline {
-            if await isPortListening(port) {
-                consecutiveFree = 0
-            } else {
-                consecutiveFree += 1
-                if consecutiveFree >= 2 { return true }
-            }
-            try? await Task.sleep(nanoseconds: 200_000_000)
+            if await isPortListening(port) { return false }
+            try? await Task.sleep(nanoseconds: 150_000_000)
         }
-        return false
+        return !(await isPortListening(port))
     }
 
     private func isPortListening(_ port: Int) async -> Bool {
@@ -185,10 +174,10 @@ public final class PortService {
     }
 
     @discardableResult
-    public func killMultiplePorts(_ ports: [PortInfo], force: Bool = false, tree: Bool = false) async -> Int {
+    public func killMultiplePorts(_ ports: [PortInfo], force: Bool = false) async -> Int {
         var killedCount = 0
         for port in ports {
-            let ok = await killPort(port, force: force, tree: tree)
+            let ok = await killPort(port, force: force)
             if ok { killedCount += 1 }
         }
         return killedCount
@@ -268,7 +257,6 @@ public final class PortService {
             allPids.append(pid)
         }
 
-        // HARD SAFETY FILTER: Never terminate shells, terminals, IDEs, GUI apps, or system processes!
         allPids = allPids.filter { p in
             guard p > 1, p != ProcessInfo.processInfo.processIdentifier else { return false }
             guard !SystemPortProtection.isSystemProtected(pid: p) else { return false }
@@ -622,7 +610,6 @@ public final class PortService {
             return AppResolution(appName: name, bundleId: "com.docker.docker", executablePath: execPath)
         }
 
-        // Dev processes (node, bun, python, vite, etc.) resolve directly to clean runtime name
         if PortService.isDevProcess(name: processName, command: command) {
             let cleanName = cleanRuntimeName(processName: processName, command: command)
             return AppResolution(appName: cleanName, bundleId: nil, executablePath: execPath)
@@ -646,7 +633,6 @@ public final class PortService {
                 let parentPid = item.ppid
                 if parentPid <= 1 { break }
 
-                // Stop climbing if current or parent is a shell, terminal, or IDE host boundary
                 if PortService.isShell(item.name) || PortService.isTerminalOrMultiplexer(item.name) || PortService.isIDEOrEditor(item.name, command: item.command) {
                     break
                 }

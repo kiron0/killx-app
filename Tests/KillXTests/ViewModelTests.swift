@@ -101,13 +101,13 @@ struct AppListViewModelTests {
         ConfigStore.shared.config.confirmKill = true
         vm.pendingKillConfirmation = nil
 
-        vm.confirmAndKillPort(port1, force: false, tree: false)
+        vm.confirmAndKillPort(port1, force: false)
 
         #expect(vm.pendingKillConfirmation != nil)
         #expect(vm.pendingKillConfirmation?.title.contains("3000") == true)
         #expect(vm.pendingKillConfirmation?.message.contains("node") == true)
         #expect(vm.pendingKillConfirmation?.message.contains("⚠️ Caution") == false)
-        #expect(vm.pendingKillConfirmation?.confirmButtonTitle == "Kill")
+        #expect(vm.pendingKillConfirmation?.confirmButtonTitle == "Tree Kill")
     }
 
     @Test("confirmAndKillPort force mode sets isForced and title")
@@ -115,12 +115,12 @@ struct AppListViewModelTests {
         ConfigStore.shared.config.confirmKill = true
         vm.pendingKillConfirmation = nil
 
-        vm.confirmAndKillPort(port1, force: true, tree: false)
+        vm.confirmAndKillPort(port1, force: true)
 
         #expect(vm.pendingKillConfirmation != nil)
-        #expect(vm.pendingKillConfirmation?.title.contains("Force Kill") == true)
+        #expect(vm.pendingKillConfirmation?.title.contains("Force Tree Kill") == true)
         #expect(vm.pendingKillConfirmation?.isForced == true)
-        #expect(vm.pendingKillConfirmation?.confirmButtonTitle == "Force Kill")
+        #expect(vm.pendingKillConfirmation?.confirmButtonTitle == "Force Tree Kill")
         #expect(vm.pendingKillConfirmation?.message.contains("⚠️ Caution") == false)
     }
 
@@ -131,7 +131,7 @@ struct AppListViewModelTests {
         vm.selectedPorts = [port1.id, port2.id]
         vm.pendingKillConfirmation = nil
 
-        vm.confirmAndKillSelectedPorts(force: false, tree: false)
+        vm.confirmAndKillSelectedPorts(force: false)
 
         #expect(vm.pendingKillConfirmation != nil)
         #expect(vm.pendingKillConfirmation?.title.contains("2") == true)
@@ -144,7 +144,7 @@ struct AppListViewModelTests {
         ConfigStore.shared.config.confirmKill = false
         vm.pendingKillConfirmation = nil
 
-        vm.confirmAndKillPort(port1, force: false, tree: false)
+        vm.confirmAndKillPort(port1, force: false)
 
         #expect(vm.pendingKillConfirmation == nil)
         ConfigStore.shared.config.confirmKill = true

@@ -153,7 +153,6 @@ struct KillXConfigTests {
         let cfg = KillXConfig.default
         #expect(cfg.excludePorts.isEmpty)
         #expect(cfg.force == .normal)
-        #expect(!cfg.treeKillByDefault)
         #expect(!cfg.defaultSelectAll)
         #expect(cfg.autoUpdate)
         #expect(cfg.confirmKill)
@@ -168,7 +167,6 @@ struct KillXConfigTests {
         var cfg = KillXConfig.default
         cfg.excludePorts = [3000, 8080]
         cfg.force = .force
-        cfg.treeKillByDefault = true
         cfg.defaultSelectAll = true
         cfg.confirmKill = false
         cfg.playSounds = false

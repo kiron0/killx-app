@@ -94,7 +94,7 @@ struct PortRowView: View {
 
             Button {
                 if !port.isSystemProtected {
-                    vm.confirmAndKillPort(port, force: isForced, tree: false)
+                    vm.confirmAndKillPort(port, force: isForced)
                 }
             } label: {
                 if port.isSystemProtected {
@@ -220,16 +220,7 @@ struct PortRowView: View {
                 assetName: killAsset,
                 systemSymbolName: killSymbol,
                 action: {
-                    vm.confirmAndKillPort(port, force: isForced, tree: false)
-                }
-            ))
-
-            let treeTitle = isForced ? "Force Tree Kill" : "Tree Kill (Process Tree)"
-            menu.addItem(MenuHelper.makeItem(
-                title: treeTitle,
-                systemSymbolName: "arrow.triangle.branch",
-                action: {
-                    vm.confirmAndKillPort(port, force: isForced, tree: true)
+                    vm.confirmAndKillPort(port, force: isForced)
                 }
             ))
         }

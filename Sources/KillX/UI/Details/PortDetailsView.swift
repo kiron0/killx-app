@@ -182,12 +182,12 @@ struct PortDetailsView: View {
         }
         uiState.isKilling = true
         Task {
-            let ok = await PortService.shared.killPort(port, force: false, tree: false)
+            let ok = await PortService.shared.killPort(port, force: false)
             if ok {
                 SoundService.playKillSingle()
                 AppListViewModel.shared.showToastMessage("Killed :\(port.port) (\(port.processName))")
             } else {
-                AppListViewModel.shared.showToastMessage("Couldn't free :\(port.port) — it re-opened. Use Tree Kill", isError: true)
+                AppListViewModel.shared.showToastMessage("Couldn't free :\(port.port) — it kept re-opening", isError: true)
             }
             await AppListViewModel.shared.refresh()
             onClose()

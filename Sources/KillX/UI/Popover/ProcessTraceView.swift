@@ -196,7 +196,7 @@ struct ProcessTraceWindowView: View {
     private func performTreeKill() {
         uiState.isKilling = true
         Task {
-            await AppListViewModel.shared.killPort(port, force: false, tree: true)
+            await AppListViewModel.shared.killPort(port, force: false)
             onClose()
         }
     }

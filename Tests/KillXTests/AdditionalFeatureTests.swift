@@ -190,17 +190,14 @@ struct ShortcutManagerTests {
     @MainActor
     func testShortcutModifierValidation() {
         let sm = ShortcutManager.shared
-        // Plain letter without modifier should be rejected
         let resPlain = sm.setKeys(["A"], for: .activateMenu)
         #expect(!resPlain)
         #expect(sm.shortcutError != nil)
 
-        // Valid shortcut with modifier should succeed
         let resValid = sm.setKeys(["^", "⌥", "Z"], for: .activateMenu)
         #expect(resValid)
         #expect(sm.shortcutError == nil)
 
-        // Reset back to default
         sm.resetDefaults()
         #expect(sm.activateMenuKeys == ["^", "⌥", "A"])
         #expect(sm.activateMenuEnabled == true)

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Build and package KillX .app bundle
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

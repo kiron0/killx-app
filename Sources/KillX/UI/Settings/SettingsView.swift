@@ -384,15 +384,6 @@ struct GeneralTabCloneView: View {
                 HelpPopoverButton(text: "Play a crisp sound whenever ports or dev processes are terminated. 👾⚡")
             }
 
-            row(label: "Process Tree:") {
-                toggle("Terminate process tree by default", isOn: Binding(
-                    get: { configStore.config.treeKillByDefault },
-                    set: { configStore.config.treeKillByDefault = $0; configStore.save() }
-                ))
-            } help: {
-                HelpPopoverButton(text: "Automatically terminate root supervisors (npm, yarn, pnpm, cargo, vite) and all child processes instead of only the listener.")
-            }
-
             row(label: "Safety:") {
                 toggle("Confirm before killing ports", isOn: Binding(
                     get: { configStore.config.confirmKill },
@@ -522,4 +513,3 @@ struct GeneralTabCloneView: View {
         .animation(.easeInOut(duration: 0.18), value: viewState.showResetConfirmation)
     }
 }
-

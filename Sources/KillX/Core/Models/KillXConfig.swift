@@ -3,7 +3,6 @@ import Foundation
 struct KillXConfig: Codable, Equatable {
     var excludePorts: [Int]
     var force: ForceMode
-    var treeKillByDefault: Bool
     var defaultSelectAll: Bool
     var autoUpdate: Bool
     var confirmKill: Bool
@@ -23,7 +22,7 @@ struct KillXConfig: Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case excludePorts, force, treeKillByDefault, defaultSelectAll, autoUpdate
+        case excludePorts, force, defaultSelectAll, autoUpdate
         case confirmKill, playSounds, disableTips, sortBy, dockerStopTimeout
         case liquidGlassEnabled
     }
@@ -55,7 +54,6 @@ struct KillXConfig: Codable, Equatable {
         KillXConfig(
             excludePorts: [],
             force: .normal,
-            treeKillByDefault: false,
             defaultSelectAll: false,
             autoUpdate: true,
             confirmKill: true,
@@ -74,7 +72,6 @@ extension KillXConfig {
         let d = KillXConfig.default
         excludePorts = (try? c.decodeIfPresent([Int].self, forKey: .excludePorts)) ?? d.excludePorts
         force = (try? c.decodeIfPresent(ForceMode.self, forKey: .force)) ?? d.force
-        treeKillByDefault = (try? c.decodeIfPresent(Bool.self, forKey: .treeKillByDefault)) ?? d.treeKillByDefault
         defaultSelectAll = (try? c.decodeIfPresent(Bool.self, forKey: .defaultSelectAll)) ?? d.defaultSelectAll
         autoUpdate = (try? c.decodeIfPresent(Bool.self, forKey: .autoUpdate)) ?? d.autoUpdate
         confirmKill = (try? c.decodeIfPresent(Bool.self, forKey: .confirmKill)) ?? d.confirmKill
