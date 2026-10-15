@@ -2,6 +2,28 @@
 
 All notable changes to KillX macOS App will be documented in this file.
 
+## 1.0.2
+
+### Added
+
+- Tree termination by default across all actions, eliminating manual tree toggles.
+- App-bundle and IDE process safety protections preventing accidental termination of GUI apps and editors.
+- Post-kill port release verification with error toast notifications when termination fails.
+- Shortcut modifier validation and dedicated Shortcuts and About settings tabs.
+- Dynamic path-based detection rules for dev tools and system-protected services.
+
+### Changed
+
+- Renamed "Tree Kill" terminology and UI actions to unified "Kill" across the entire app.
+- Simplified kill confirmation dialog messages to remove verbose caution text.
+- Unified action button and quit icon styling to support dynamic force-kill states.
+- Optimized process tree scanning, Docker availability caching, and port termination performance.
+
+### Fixed
+
+- Prevented false positive IDE protection matches on generic Electron helper processes.
+- Fixed settings tab dimensions and background appearance rendering.
+
 ## 1.0.1
 
 ### Added
