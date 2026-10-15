@@ -58,7 +58,7 @@ final class UpdateChecker: ObservableObject {
             }
 
             if httpResponse.statusCode == 404 {
-                handleUpToDate(isUserInitiated: isUserInitiated)
+                handleError(message: "No published release was found.", isUserInitiated: isUserInitiated)
                 return
             }
 

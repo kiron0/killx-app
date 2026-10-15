@@ -70,7 +70,8 @@ extension KillXConfig {
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let d = KillXConfig.default
-        excludePorts = (try? c.decodeIfPresent([Int].self, forKey: .excludePorts)) ?? d.excludePorts
+        let decodedPorts = (try? c.decodeIfPresent([Int].self, forKey: .excludePorts)) ?? d.excludePorts
+        excludePorts = Array(Set(decodedPorts.filter { (1...65535).contains($0) })).sorted()
         force = (try? c.decodeIfPresent(ForceMode.self, forKey: .force)) ?? d.force
         defaultSelectAll = (try? c.decodeIfPresent(Bool.self, forKey: .defaultSelectAll)) ?? d.defaultSelectAll
         autoUpdate = (try? c.decodeIfPresent(Bool.self, forKey: .autoUpdate)) ?? d.autoUpdate
@@ -78,7 +79,8 @@ extension KillXConfig {
         playSounds = (try? c.decodeIfPresent(Bool.self, forKey: .playSounds)) ?? d.playSounds
         disableTips = (try? c.decodeIfPresent(Bool.self, forKey: .disableTips)) ?? d.disableTips
         sortBy = (try? c.decodeIfPresent(SortBy.self, forKey: .sortBy)) ?? d.sortBy
-        dockerStopTimeout = (try? c.decodeIfPresent(Int.self, forKey: .dockerStopTimeout)) ?? d.dockerStopTimeout
+        let decodedTimeout = (try? c.decodeIfPresent(Int.self, forKey: .dockerStopTimeout)) ?? d.dockerStopTimeout
+        dockerStopTimeout = min(max(decodedTimeout, 1), 60)
         liquidGlassEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .liquidGlassEnabled)) ?? d.liquidGlassEnabled
     }
 }

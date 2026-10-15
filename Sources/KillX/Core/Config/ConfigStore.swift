@@ -23,7 +23,7 @@ final class ConfigStore: ObservableObject {
         UserDefaults.standard.set(json, forKey: Self.userDefaultsKey)
 
         let current = (config.excludePorts, config.sortBy)
-        guard lastListConfig == nil || lastListConfig! != current else { return }
+        if let lastListConfig, lastListConfig == current { return }
         lastListConfig = current
 
         Task { @MainActor in

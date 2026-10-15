@@ -2,7 +2,7 @@ import Testing
 import Foundation
 @testable import KillX
 
-@Suite("AppListViewModel State & Selection Tests")
+@Suite("AppListViewModel State & Selection Tests", .serialized)
 @MainActor
 struct AppListViewModelTests {
     let vm = AppListViewModel.shared
@@ -81,6 +81,36 @@ struct AppListViewModelTests {
         vm.selectedPorts = [port1.id]
         #expect(!vm.isAllSelected)
         #expect(vm.isPartiallySelected)
+    }
+
+    @Test("Excluded ports do not count as selected visible ports")
+    func testExcludedSelectionIsNotVisible() {
+        vm.ports = [port1, port2]
+        vm.searchQuery = ""
+        vm.selectedPorts = [port1.id, port2.id]
+        ConfigStore.shared.config.excludePorts = [port2.port]
+
+        #expect(vm.selectedVisibleCount == 1)
+        #expect(vm.filteredPorts.map(\.id) == [port1.id])
+
+        ConfigStore.shared.config.excludePorts = []
+    }
+
+    @Test("Force kill all confirmation excludes excluded ports")
+    func testForceKillAllRespectsExclusions() {
+        vm.ports = [port1, port2]
+        ConfigStore.shared.config.excludePorts = [port2.port]
+        ConfigStore.shared.config.confirmKill = true
+        vm.pendingKillConfirmation = nil
+
+        vm.confirmAndForceKillAll()
+
+        #expect(vm.pendingKillConfirmation?.title.contains("(1)") == true)
+        #expect(vm.pendingKillConfirmation?.message.contains(":3000") == true)
+        #expect(vm.pendingKillConfirmation?.message.contains(":5432") == false)
+
+        vm.pendingKillConfirmation = nil
+        ConfigStore.shared.config.excludePorts = []
     }
 
     @Test("toggleSelectAll toggles between all and none")

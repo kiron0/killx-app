@@ -23,6 +23,19 @@ public final class DockerService {
         lastFetch = Date()
     }
 
+    private func clearUnavailableMarker() {
+        lock.lock()
+        defer { lock.unlock() }
+        dockerUnavailableUntil = nil
+    }
+
+    private func invalidateCache() {
+        lock.lock()
+        defer { lock.unlock() }
+        lastFetch = nil
+        dockerUnavailableUntil = nil
+    }
+
     private func unavailableUntil() -> Date? {
         lock.lock()
         defer { lock.unlock() }
@@ -85,6 +98,7 @@ public final class DockerService {
             }
         }
 
+        clearUnavailableMarker()
         writeCache(list)
         return list
     }
@@ -107,6 +121,7 @@ public final class DockerService {
         }
 
         let result = await runCommand(executable: dockerPath, arguments: args)
+        if result != nil { invalidateCache() }
         return result != nil
     }
 

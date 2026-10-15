@@ -101,7 +101,7 @@ struct MainPopoverView: View {
 
     private var primaryActionButton: some View {
         let isForced = vm.isOptionKeyPressed || configStore.config.force == .force
-        let selectedCount = vm.selectedPorts.count
+        let selectedCount = vm.selectedVisibleCount
 
         let (title, isEnabled, action): (String, Bool, () -> Void) = {
             if selectedCount > 0 {

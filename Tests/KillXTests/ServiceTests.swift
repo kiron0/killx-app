@@ -12,6 +12,9 @@ struct PortServiceTests {
         #expect(PortService.isDevProcess(name: "bun"))
         #expect(PortService.isDevProcess(name: "python3"))
         #expect(PortService.isDevProcess(name: "cargo"))
+        #expect(PortService.isDevProcess(name: "mongod"))
+        #expect(PortService.isDevProcess(name: "postgres"))
+        #expect(PortService.isDevProcess(name: "redis-server"))
         #expect(PortService.isDevProcess(name: "unknown", command: "/usr/local/bin/node server.js"))
         #expect(PortService.isDevProcess(name: "unknown", command: "bun run dev"))
         #expect(!PortService.isDevProcess(name: "Finder"))
@@ -79,6 +82,26 @@ struct PortServiceTests {
         let appRes = PortService.shared.resolveApp(pid: 96009, processName: "node", command: "node server.js")
         #expect(appRes.appName == "Node.js")
         #expect(appRes.bundleId == nil)
+    }
+
+    @Test("Homebrew services match resolved executable or binary name")
+    func testHomebrewServiceMatching() {
+        #expect(PortService.homebrewServiceMatches(
+            executablePath: "/opt/homebrew/Cellar/mongodb-community/8.0.0/bin/mongod",
+            arguments: ["/opt/homebrew/opt/mongodb-community/bin/mongod", "--config", "/opt/homebrew/etc/mongod.conf"]
+        ))
+        #expect(!PortService.homebrewServiceMatches(
+            executablePath: "/opt/homebrew/bin/node",
+            arguments: ["/opt/homebrew/opt/mongodb-community/bin/mongod"]
+        ))
+        #expect(PortService.homebrewServiceMatches(
+            executablePath: "/opt/homebrew/Cellar/mysql/9.4.0/bin/mysqld",
+            arguments: ["/opt/homebrew/Cellar/mysql/9.4.0/bin/mysqld_safe"]
+        ))
+        #expect(!PortService.homebrewServiceMatches(
+            executablePath: "/tmp/mongod",
+            arguments: ["/tmp/mongod"]
+        ))
     }
 }
 

@@ -47,7 +47,6 @@ final class AppListViewModel: ObservableObject {
     private var hasInitializedSelection = false
     private var hasLoadedOnce = false
     private var toastTask: Task<Void, Never>?
-    private var refreshTask: Task<Void, Never>?
     private var fetchGeneration = 0
 
     private let quotes = [
@@ -112,6 +111,16 @@ final class AppListViewModel: ObservableObject {
 
     var visibleCount: Int {
         filteredPorts.count
+    }
+
+    var selectedVisibleCount: Int {
+        let visibleIds = Set(filteredPorts.map(\.id))
+        return selectedPorts.intersection(visibleIds).count
+    }
+
+    private var killablePorts: [PortInfo] {
+        let excluded = Set(configStore.config.excludePorts)
+        return ports.filter { !$0.isSystemProtected && !excluded.contains($0.port) }
     }
 
     var isAllSelected: Bool {
@@ -235,7 +244,7 @@ final class AppListViewModel: ObservableObject {
     }
 
     func confirmAndKillSelectedPorts(force: Bool = false) {
-        let targets = ports.filter { selectedPorts.contains($0.id) && !$0.isSystemProtected }
+        let targets = killablePorts.filter { selectedPorts.contains($0.id) }
         guard !targets.isEmpty else { return }
 
         let isForced = force || isOptionKeyPressed || configStore.config.force == .force
@@ -288,7 +297,7 @@ final class AppListViewModel: ObservableObject {
     }
 
     func killSelectedPorts(force: Bool = false) async {
-        let targets = ports.filter { selectedPorts.contains($0.id) && !$0.isSystemProtected }
+        let targets = killablePorts.filter { selectedPorts.contains($0.id) }
         guard !targets.isEmpty else { return }
         isBatchKilling = true
         pendingPortIds.formUnion(targets.map(\.id))
@@ -311,7 +320,7 @@ final class AppListViewModel: ObservableObject {
     }
 
     func confirmAndForceKillAll() {
-        let targets = ports.filter { !$0.isSystemProtected }
+        let targets = killablePorts
         guard !targets.isEmpty else { return }
 
         let count = targets.count
@@ -338,7 +347,7 @@ final class AppListViewModel: ObservableObject {
     }
 
     func forceKillAll() async {
-        let targets = ports.filter { !$0.isSystemProtected }
+        let targets = killablePorts
         guard !targets.isEmpty else { return }
         isBatchKilling = true
         pendingPortIds.formUnion(targets.map(\.id))

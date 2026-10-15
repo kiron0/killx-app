@@ -179,6 +179,18 @@ struct KillXConfigTests {
         #expect(decoded == cfg)
     }
 
+    @Test("Config decoding sanitizes persisted ranges")
+    func testConfigDecodeSanitizesRanges() throws {
+        let json = """
+        {"excludePorts":[8080,-1,70000,8080,3000],"dockerStopTimeout":999}
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(KillXConfig.self, from: json)
+
+        #expect(decoded.excludePorts == [3000, 8080])
+        #expect(decoded.dockerStopTimeout == 60)
+    }
+
     @Test("SortBy decode from string variants")
     func testSortByDecode() throws {
         let map: [(String, KillXConfig.SortBy)] = [

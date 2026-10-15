@@ -13,7 +13,9 @@ public final class PortService {
         "turbo", "nuxt", "astro", "remix", "svelte", "nest", "flask",
         "uvicorn", "gunicorn", "fastapi", "uv", "poetry", "pipenv", "dotnet",
         "mvn", "gradle", "hypercorn", "granian", "daphne", "ts-node", "ts-node-dev",
-        "tsx", "wrangler", "prisma"
+        "tsx", "wrangler", "prisma", "mongod", "postgres", "redis-server",
+        "mysqld", "mariadbd",
+        "nginx", "caddy"
     ]
 
     public static func isDevProcess(name: String, command: String = "") -> Bool {
@@ -39,9 +41,10 @@ public final class PortService {
         if parsed.isEmpty { return [] }
 
         let pids = Array(Set(parsed.map(\.pid)))
-        let allProcs = await fetchAllProcesses()
-        let cwdMap = await fetchCwds(for: pids)
-        let dockerContainers = await DockerService.shared.fetchContainers()
+        async let processLookup = fetchAllProcesses()
+        async let cwdLookup = fetchCwds(for: pids)
+        async let dockerLookup = DockerService.shared.fetchContainers()
+        let (allProcs, cwdMap, dockerContainers) = await (processLookup, cwdLookup, dockerLookup)
 
         var dockerByPort: [Int: DockerInfo] = [:]
         dockerByPort.reserveCapacity(dockerContainers.count)
@@ -110,45 +113,81 @@ public final class PortService {
     public func killPort(_ port: PortInfo, force: Bool = false) async -> Bool {
         if let docker = port.docker {
             let timeout = max(1, ConfigStore.shared.config.dockerStopTimeout)
-            return await DockerService.shared.stopContainer(containerId: docker.containerId, force: force, timeoutSeconds: timeout)
+            guard await DockerService.shared.stopContainer(
+                containerId: docker.containerId,
+                force: force,
+                timeoutSeconds: timeout
+            ) else { return false }
+            return await waitUntilPortReleased(port.port, timeout: 5, retryListeners: false)
         }
 
         if port.isSystemProtected || SystemPortProtection.isSystemProtected(port: port) {
             return false
         }
 
+        if await stopHomebrewServiceIfNeeded(pid: port.pid) == true {
+            return await waitUntilPortReleased(port.port, timeout: 8, retryListeners: false)
+        }
+
         let treeDone = await terminateProcessTree(pid: port.pid, force: force)
         if !treeDone {
             guard await signalProcess(pid: port.pid, force: force) else { return false }
         }
-        return await waitUntilPortReleased(port.port, timeout: 2.5)
+        return await waitUntilPortReleased(port.port, timeout: 5, retryListeners: true)
     }
 
     private func signalProcess(pid: pid_t, force: Bool) async -> Bool {
         let sig = force ? SIGKILL : SIGTERM
-        guard Darwin.kill(pid, sig) == 0 else { return false }
+        guard Darwin.kill(pid, sig) == 0 else { return errno == ESRCH }
         if force { return true }
         for _ in 0..<10 {
             try? await Task.sleep(nanoseconds: 100_000_000)
-            if Darwin.kill(pid, 0) != 0 { return true }
+            if Darwin.kill(pid, 0) != 0 { return errno == ESRCH }
         }
-        _ = Darwin.kill(pid, SIGKILL)
-        return true
+        return Darwin.kill(pid, SIGKILL) == 0 || errno == ESRCH
     }
 
-    private func waitUntilPortReleased(_ port: Int, timeout: TimeInterval) async -> Bool {
+    private func waitUntilPortReleased(
+        _ port: Int,
+        timeout: TimeInterval,
+        retryListeners: Bool
+    ) async -> Bool {
         let deadline = Date().addingTimeInterval(timeout)
+        var releasedSince: Date?
+        var retryCount = 0
+
         while Date() < deadline {
-            if await isPortListening(port) { return false }
-            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard let listenerPids = await listeningPids(port: port) else {
+                releasedSince = nil
+                try? await Task.sleep(nanoseconds: 200_000_000)
+                continue
+            }
+
+            if listenerPids.isEmpty {
+                if let releasedSince, Date().timeIntervalSince(releasedSince) >= 0.75 {
+                    return true
+                }
+                if releasedSince == nil { releasedSince = Date() }
+            } else {
+                releasedSince = nil
+                if retryListeners {
+                    let useForce = retryCount > 0
+                    for pid in listenerPids {
+                        _ = await terminateProcessTree(pid: pid, force: useForce)
+                    }
+                    retryCount += 1
+                }
+            }
+            try? await Task.sleep(nanoseconds: 200_000_000)
         }
-        return !(await isPortListening(port))
+        guard let releasedSince else { return false }
+        return Date().timeIntervalSince(releasedSince) >= 0.75
     }
 
-    private func isPortListening(_ port: Int) async -> Bool {
-        guard port > 0, port <= 65535 else { return false }
-        guard let out = await runLsofListeningPids(port: port) else { return false }
-        return out.split(whereSeparator: { $0.isNewline || $0 == " " }).contains { Int($0) != nil }
+    private func listeningPids(port: Int) async -> Set<pid_t>? {
+        guard port > 0, port <= 65535 else { return nil }
+        guard let out = await runLsofListeningPids(port: port) else { return nil }
+        return Set(out.split(whereSeparator: { $0.isWhitespace }).compactMap { pid_t(String($0)) })
     }
 
     private func runLsofListeningPids(port: Int) async -> String? {
@@ -166,6 +205,108 @@ public final class PortService {
                     let data = pipe.fileHandleForReading.readDataToEndOfFile()
                     proc.waitUntilExit()
                     continuation.resume(returning: String(data: data, encoding: .utf8))
+                } catch {
+                    continuation.resume(returning: nil)
+                }
+            }
+        }
+    }
+
+    private struct HomebrewServiceRecord: Decodable {
+        let name: String
+        let file: String?
+    }
+
+    private static let homebrewServiceProcessNames: Set<String> = [
+        "mongod", "postgres", "redis-server", "mysqld", "mariadbd",
+        "nginx", "caddy", "httpd", "memcached", "rabbitmq-server"
+    ]
+
+    private func stopHomebrewServiceIfNeeded(pid: pid_t) async -> Bool? {
+        guard let executablePath = executablePath(pid: pid),
+              executablePath.hasPrefix("/opt/homebrew/") || executablePath.hasPrefix("/usr/local/"),
+              Self.homebrewServiceProcessNames.contains(URL(fileURLWithPath: executablePath).lastPathComponent) else {
+            return nil
+        }
+
+        let brewPaths = ["/opt/homebrew/bin/brew", "/usr/local/bin/brew"]
+        guard let brewPath = brewPaths.first(where: { FileManager.default.isExecutableFile(atPath: $0) }),
+              let serviceData = await runCommandData(
+                executable: brewPath,
+                arguments: ["services", "list", "--json"]
+              ),
+              let services = try? JSONDecoder().decode([HomebrewServiceRecord].self, from: serviceData) else {
+            return nil
+        }
+
+        for service in services {
+            guard let plistPath = service.file,
+                  let data = try? Data(contentsOf: URL(fileURLWithPath: plistPath)),
+                  let plist = try? PropertyListSerialization.propertyList(from: data, format: nil),
+                  let dictionary = plist as? [String: Any],
+                  let arguments = dictionary["ProgramArguments"] as? [String],
+                  Self.homebrewServiceMatches(executablePath: executablePath, arguments: arguments) else {
+                continue
+            }
+
+            return await runCommandData(
+                executable: brewPath,
+                arguments: ["services", "stop", service.name]
+            ) != nil
+        }
+        return nil
+    }
+
+    static func homebrewServiceMatches(executablePath: String, arguments: [String]) -> Bool {
+        guard let serviceExecutable = arguments.first, !serviceExecutable.isEmpty else { return false }
+        let isHomebrewProcess = executablePath.hasPrefix("/opt/homebrew/")
+            || executablePath.hasPrefix("/usr/local/")
+        let isHomebrewService = serviceExecutable.hasPrefix("/opt/homebrew/")
+            || serviceExecutable.hasPrefix("/usr/local/")
+        guard isHomebrewProcess, isHomebrewService else { return false }
+
+        let runningURL = URL(fileURLWithPath: executablePath).resolvingSymlinksInPath()
+        let serviceURL = URL(fileURLWithPath: serviceExecutable).resolvingSymlinksInPath()
+        if runningURL.path == serviceURL.path { return true }
+
+        if let runningRoot = homebrewFormulaRoot(for: runningURL.path),
+           let serviceRoot = homebrewFormulaRoot(for: serviceURL.path),
+           runningRoot == serviceRoot {
+            return true
+        }
+
+        return runningURL.lastPathComponent == serviceURL.lastPathComponent
+    }
+
+    private static func homebrewFormulaRoot(for path: String) -> String? {
+        let parts = path.split(separator: "/")
+        guard let cellarIndex = parts.firstIndex(of: "Cellar"),
+              parts.count > cellarIndex + 2 else { return nil }
+        let versionIndex = cellarIndex + 2
+        return parts[...versionIndex].joined(separator: "/")
+    }
+
+    private func executablePath(pid: pid_t) -> String? {
+        var buffer = [CChar](repeating: 0, count: 4096)
+        guard proc_pidpath(pid, &buffer, UInt32(buffer.count)) > 0 else { return nil }
+        return String(cString: buffer)
+    }
+
+    private func runCommandData(executable: String, arguments: [String]) async -> Data? {
+        await withCheckedContinuation { continuation in
+            DispatchQueue.global(qos: .userInitiated).async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: executable)
+                process.arguments = arguments
+                let output = Pipe()
+                process.standardOutput = output
+                process.standardError = output
+
+                do {
+                    try process.run()
+                    let data = output.fileHandleForReading.readDataToEndOfFile()
+                    process.waitUntilExit()
+                    continuation.resume(returning: process.terminationStatus == 0 ? data : nil)
                 } catch {
                     continuation.resume(returning: nil)
                 }
@@ -271,8 +412,11 @@ public final class PortService {
         let reversed = Array(allPids.reversed())
         let sig = force ? SIGKILL : SIGTERM
 
+        var signalledAny = false
         for p in reversed {
-            Darwin.kill(p, sig)
+            if Darwin.kill(p, sig) == 0 || errno == ESRCH {
+                signalledAny = true
+            }
         }
 
         if !force {
@@ -284,12 +428,14 @@ public final class PortService {
             }
             if anyAlive {
                 for p in reversed {
-                    Darwin.kill(p, SIGKILL)
+                    if Darwin.kill(p, SIGKILL) == 0 || errno == ESRCH {
+                        signalledAny = true
+                    }
                 }
             }
         }
 
-        return true
+        return signalledAny
     }
 
     private struct RawParsedLsof {
@@ -424,7 +570,7 @@ public final class PortService {
             DispatchQueue.global(qos: .userInitiated).async {
                 let proc = Process()
                 proc.executableURL = URL(fileURLWithPath: "/bin/ps")
-                proc.arguments = ["-axo", "pid=,ppid=,user=,ucomm=,pcpu=,args="]
+                proc.arguments = ["-axo", "pid=,ppid=,user=,pcpu=,args="]
                 let pipe = Pipe()
                 proc.standardOutput = pipe
                 proc.standardError = Pipe()
@@ -439,21 +585,21 @@ public final class PortService {
                         for line in lines {
                             let trimmed = line.trimmingCharacters(in: .whitespaces)
                             guard !trimmed.isEmpty else { continue }
-                            let parts = trimmed.split(separator: " ", maxSplits: 5, omittingEmptySubsequences: true)
+                            let parts = trimmed.split(separator: " ", maxSplits: 4, omittingEmptySubsequences: true)
                             if parts.count >= 5,
                                let pid = pid_t(parts[0]),
                                let ppid = pid_t(parts[1]) {
                                 let user = String(parts[2])
-                                let ucomm = String(parts[3])
-                                let cpu = Double(parts[4]) ?? 0
-                                let command = parts.count > 5 ? String(parts[5]).trimmingCharacters(in: .whitespaces) : ucomm
+                                let cpu = Double(parts[3]) ?? 0
+                                let command = String(parts[4]).trimmingCharacters(in: .whitespaces)
+                                let name = PortService.processName(pid: pid, fallbackCommand: command)
 
                                 map[pid] = RawProcessItem(
                                     pid: pid,
                                     ppid: ppid,
                                     user: user,
-                                    name: ucomm,
-                                    command: command.isEmpty ? ucomm : command,
+                                    name: name,
+                                    command: command.isEmpty ? name : command,
                                     cpuUsage: cpu,
                                     cwd: nil,
                                     startTime: nil
@@ -467,6 +613,18 @@ public final class PortService {
                 }
             }
         }
+    }
+
+    private static func processName(pid: pid_t, fallbackCommand: String) -> String {
+        var buffer = [CChar](repeating: 0, count: 1024)
+        if proc_name(pid, &buffer, UInt32(buffer.count)) > 0 {
+            return String(cString: buffer)
+        }
+
+        guard let executable = fallbackCommand.split(whereSeparator: { $0.isWhitespace }).first else {
+            return "unknown"
+        }
+        return URL(fileURLWithPath: String(executable)).lastPathComponent
     }
 
     private func getSupervisorRootPid(ancestry: [ProcessTreeNodeInfo]) -> pid_t? {
@@ -497,8 +655,10 @@ public final class PortService {
         var queue = [rootPid]
         var seen = Set<pid_t>([rootPid])
 
-        while !queue.isEmpty {
-            let current = queue.removeFirst()
+        var queueIndex = 0
+        while queueIndex < queue.count {
+            let current = queue[queueIndex]
+            queueIndex += 1
             guard let children = childrenMap[current] else { continue }
             for pid in children where !seen.contains(pid) {
                 seen.insert(pid)
