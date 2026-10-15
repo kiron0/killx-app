@@ -13,6 +13,7 @@ struct PortRowView: View {
     @StateObject private var state = RowUIState()
 
     private let accentColor = KillXTheme.accent
+    private let forceColor = KillXTheme.forceColor
 
     private var isSelected: Bool {
         vm.selectedPorts.contains(port.id)
@@ -143,7 +144,7 @@ struct PortRowView: View {
 
     @ViewBuilder
     private func quitButtonIcon(isForced: Bool) -> some View {
-        let activeColor = accentColor
+        let activeColor = isForced ? forceColor : accentColor
 
         ZStack {
             Color.clear

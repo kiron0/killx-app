@@ -13,6 +13,8 @@ struct MainPopoverView: View {
 
     private static let accentColor = KillXTheme.accent
     private static let accentGradient = KillXTheme.accentGradient
+    private static let forceGradient = KillXTheme.forceGradient
+    private static let forceColor = KillXTheme.forceColor
 
     var body: some View {
         VStack(spacing: 0) {
@@ -143,13 +145,13 @@ struct MainPopoverView: View {
             .frame(height: 24)
             .background(
                 isEnabled
-                    ? Self.accentGradient
+                    ? (isForced ? Self.forceGradient : Self.accentGradient)
                     : LinearGradient(colors: [Color.primary.opacity(0.08), Color.primary.opacity(0.08)], startPoint: .top, endPoint: .bottom)
             )
             .clipShape(RoundedRectangle(cornerRadius: 6))
             .shadow(
                 color: isEnabled
-                    ? Self.accentColor.opacity(uiState.isActionButtonHovered ? 0.35 : 0.15)
+                    ? (isForced ? Self.forceColor.opacity(uiState.isActionButtonHovered ? 0.35 : 0.15) : Self.accentColor.opacity(uiState.isActionButtonHovered ? 0.3 : 0.12))
                     : Color.clear,
                 radius: 2,
                 y: 1
