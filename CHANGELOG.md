@@ -2,6 +2,21 @@
 
 All notable changes to KillX macOS App will be documented in this file.
 
+## 1.0.4
+
+### Added
+
+- In-app over-the-air (OTA) update pipeline with background downloading and staged installation.
+- One-click "Download & Install" and seamless "Install & Relaunch" directly inside the update window.
+- Real-time download progress bar with downloaded byte counters and transfer speed display.
+- Automated extraction supporting direct GitHub `.zip` assets with `.dmg` fallback.
+- Security verification ensuring bundle identifier, version integrity, and valid code signature before installation.
+
+### Changed
+
+- Redesigned update notification window with interactive state machines (checking, download progress, extraction, ready, error).
+- Enhanced update asset selection prioritizing direct OTA zip packages over disk images.
+
 ## 1.0.3
 
 ### Added
