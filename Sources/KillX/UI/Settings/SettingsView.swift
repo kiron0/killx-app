@@ -50,9 +50,9 @@ enum SettingsTab: String, CaseIterable {
     var contentHeight: CGFloat {
         switch self {
         case .general:
-            if #available(macOS 26.0, *) { return 259 }
-            return 229
-        case .monitoring: return 139
+            if #available(macOS 26.0, *) { return 266 }
+            return 236
+        case .monitoring: return 146
         case .exclude:   return 306
         case .shortcuts: return 221
         case .about:     return 186
