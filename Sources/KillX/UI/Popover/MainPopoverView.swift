@@ -269,79 +269,51 @@ struct MainPopoverView: View {
             }
         ))
 
-        let udpItem = MenuHelper.makeItem(
-            title: "Include UDP Listeners",
-            systemSymbolName: "network",
-            action: {
-                configStore.config.includeUDP.toggle()
-                configStore.save()
-                Task { await vm.refresh() }
+        if !vm.ports.isEmpty {
+            menu.addItem(.separator())
+
+            menu.addItem(MenuHelper.makeItem(
+                title: "Save Current Ports as Profile…",
+                systemSymbolName: "folder.badge.plus",
+                action: { saveCurrentProfile() }
+            ))
+
+            if !configStore.config.profiles.isEmpty {
+                let profilesItem = NSMenuItem(title: "Select Project Profile", action: nil, keyEquivalent: "")
+                let profilesMenu = NSMenu()
+                for profile in configStore.config.profiles {
+                    profilesMenu.addItem(MenuHelper.makeItem(title: profile.name, action: {
+                        vm.applyProfile(profile)
+                    }))
+                }
+                profilesItem.submenu = profilesMenu
+                menu.addItem(profilesItem)
             }
-        )
-        udpItem.state = configStore.config.includeUDP ? .on : .off
-        menu.addItem(udpItem)
 
-        let countItem = MenuHelper.makeItem(
-            title: "Show Listener Count in Menu Bar",
-            systemSymbolName: "number.circle",
-            action: {
-                configStore.config.showMenuBarCount.toggle()
-                configStore.save()
-                StatusItemController.shared?.updateMenuBarCount(vm.visibleCount)
-            }
-        )
-        countItem.state = configStore.config.showMenuBarCount ? .on : .off
-        menu.addItem(countItem)
-
-        let groupingItem = NSMenuItem(title: "Group List", action: nil, keyEquivalent: "")
-        let groupingMenu = NSMenu()
-        for mode in ListenerGrouping.allCases {
-            let item = MenuHelper.makeItem(title: mode.rawValue, action: {
-                configStore.config.grouping = mode
-                configStore.save()
-            })
-            item.state = configStore.config.grouping == mode ? .on : .off
-            groupingMenu.addItem(item)
-        }
-        groupingItem.submenu = groupingMenu
-        menu.addItem(groupingItem)
-
-        menu.addItem(MenuHelper.makeItem(
-            title: "Save Current Ports as Profile…",
-            systemSymbolName: "folder.badge.plus",
-            action: { saveCurrentProfile() }
-        ))
-
-        if !configStore.config.profiles.isEmpty {
-            let profilesItem = NSMenuItem(title: "Select Project Profile", action: nil, keyEquivalent: "")
-            let profilesMenu = NSMenu()
-            for profile in configStore.config.profiles {
-                profilesMenu.addItem(MenuHelper.makeItem(title: profile.name, action: {
-                    vm.applyProfile(profile)
-                }))
-            }
-            profilesItem.submenu = profilesMenu
-            menu.addItem(profilesItem)
+            menu.addItem(MenuHelper.makeItem(
+                title: "Export Redacted Diagnostics…",
+                systemSymbolName: "square.and.arrow.up",
+                action: { exportDiagnostics() }
+            ))
         }
 
-        menu.addItem(MenuHelper.makeItem(
-            title: "Export Redacted Diagnostics…",
-            systemSymbolName: "square.and.arrow.up",
-            action: { exportDiagnostics() }
-        ))
-
-        menu.addItem(MenuHelper.makeItem(
-            title: "Copy Recent Listener History",
-            systemSymbolName: "clock.arrow.circlepath",
-            action: {
-                let text = ListenerHistoryStore.shared.entries.prefix(50).map {
-                    "\($0.date) :\($0.port) \($0.event) \($0.detail)"
-                }.joined(separator: "\n")
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(text, forType: .string)
-                vm.showToastMessage("Listener history copied")
+        if !ListenerHistoryStore.shared.entries.isEmpty {
+            if vm.ports.isEmpty {
+                menu.addItem(.separator())
             }
-        ))
+            menu.addItem(MenuHelper.makeItem(
+                title: "Copy Recent Listener History",
+                systemSymbolName: "clock.arrow.circlepath",
+                action: {
+                    let text = ListenerHistoryStore.shared.entries.prefix(50).map {
+                        "\($0.date) :\($0.port) \($0.event) \($0.detail)"
+                    }.joined(separator: "\n")
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(text, forType: .string)
+                    vm.showToastMessage("Listener history copied")
+                }
+            ))
+        }
 
         menu.addItem(.separator())
 

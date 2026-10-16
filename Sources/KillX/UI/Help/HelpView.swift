@@ -203,7 +203,7 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
                 ),
                 KillXHelpSection(
                     title: "UDP Port Discovery",
-                    body: "Toggle UDP listener discovery in Settings > General to monitor UDP services alongside standard TCP listeners."
+                    body: "Toggle UDP listener discovery in Settings > Monitoring to monitor UDP services alongside standard TCP listeners."
                 ),
                 KillXHelpSection(
                     title: "Docker Container Mapping",
@@ -279,16 +279,17 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
             category: .preferences,
             title: "Settings & Updates",
             symbol: "gearshape.2",
-            summary: "Overview of General, Exclude, Shortcuts, About tabs, and version updates.",
+            summary: "Overview of General, Monitoring, Exclude, Shortcuts, About tabs, and version updates.",
             sections: [
                 KillXHelpSection(
                     title: "Preferences Tabs",
-                    body: "Settings is divided into 4 focused tabs:",
+                    body: "Settings is divided into 5 focused tabs:",
                     bullets: [
-                        "General - Startup at login, sounds, safety confirmation, sort order, and default signals",
+                        "General - Startup, sounds, safety confirmation, appearance, sort order, and reset",
+                        "Monitoring - TCP/UDP discovery, menu bar count, grouping, and default signal",
                         "Exclude - Manage protected port list",
                         "Shortcuts - Global keyboard hotkey recorder",
-                        "About - Version information, update checking, contact, and factory reset"
+                        "About - Version information, update checking, and contact"
                     ]
                 ),
                 KillXHelpSection(
@@ -608,9 +609,14 @@ struct HelpView: View {
     private func footerLinks(for topic: KillXHelpTopic) -> some View {
         HStack(spacing: 8) {
             switch topic.id {
-            case "quick-start", "port-list", "kill-modes", "port-watching", "network-exposure", "appearance":
+            case "quick-start", "port-list", "appearance":
                 Button("General Settings") {
                     SettingsWindowController.shared.show(tab: .general)
+                }
+
+            case "kill-modes", "port-watching", "network-exposure":
+                Button("Monitoring Settings") {
+                    SettingsWindowController.shared.show(tab: .monitoring)
                 }
 
             case "exclude":

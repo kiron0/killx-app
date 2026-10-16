@@ -4,6 +4,7 @@ import Combine
 
 enum SettingsTab: String, CaseIterable {
     case general = "General"
+    case monitoring = "Monitoring"
     case exclude = "Exclude"
     case shortcuts = "Shortcuts"
     case about = "About"
@@ -15,6 +16,7 @@ enum SettingsTab: String, CaseIterable {
     var iconName: String {
         switch self {
         case .general:   return "preferences-general"
+        case .monitoring: return "preferences-monitoring"
         case .exclude:   return "preferences-exclude"
         case .shortcuts: return "preferences-shortcuts"
         case .about:     return "preferences-about"
@@ -24,6 +26,7 @@ enum SettingsTab: String, CaseIterable {
     var fallbackSymbolName: String {
         switch self {
         case .general:   return "gearshape"
+        case .monitoring: return "waveform.path.ecg"
         case .exclude:   return "nosign"
         case .shortcuts: return "command"
         case .about:     return "bolt.horizontal.fill"
@@ -47,8 +50,9 @@ enum SettingsTab: String, CaseIterable {
     var contentHeight: CGFloat {
         switch self {
         case .general:
-            if #available(macOS 26.0, *) { return 301 }
-            return 271
+            if #available(macOS 26.0, *) { return 259 }
+            return 229
+        case .monitoring: return 139
         case .exclude:   return 306
         case .shortcuts: return 221
         case .about:     return 186
@@ -244,6 +248,9 @@ struct SettingsContainerView: View {
             case .general:
                 GeneralTabCloneView()
                     .environmentObject(configStore)
+            case .monitoring:
+                MonitoringTabView()
+                    .environmentObject(configStore)
             case .exclude:
                 ExcludeTabView()
                     .environmentObject(configStore)
@@ -393,7 +400,7 @@ struct GeneralTabCloneView: View {
                 HelpPopoverButton(text: "Show a confirmation prompt before terminating ports.")
             }
 
-            row(label: "") {
+            row(label: "Selection:") {
                 toggle("Deselect ports by default", isOn: Binding(
                     get: { !configStore.config.defaultSelectAll },
                     set: {
@@ -405,7 +412,7 @@ struct GeneralTabCloneView: View {
                 HelpPopoverButton(text: "Keep port list unselected on refresh instead of selecting everything.")
             }
 
-            row(label: "") {
+            row(label: "Footer:") {
                 toggle("Disable tips in footer", isOn: Binding(
                     get: { configStore.config.disableTips },
                     set: { configStore.config.disableTips = $0; configStore.save() }
@@ -453,20 +460,6 @@ struct GeneralTabCloneView: View {
                 HelpPopoverButton(text: "Sort listening ports by port number, process name, memory, or CPU.")
             }
 
-            row(label: "Default signal:") {
-                Picker("", selection: Binding(
-                    get: { configStore.config.force == .force ? "Force (SIGKILL)" : "Graceful (SIGTERM)" },
-                    set: { configStore.config.force = ($0 == "Force (SIGKILL)" ? .force : .normal); configStore.save() }
-                )) {
-                    Text("Graceful (SIGTERM)").tag("Graceful (SIGTERM)")
-                    Text("Force (SIGKILL)").tag("Force (SIGKILL)")
-                }
-                .frame(width: 175, alignment: .leading)
-                .labelsHidden()
-            } help: {
-                HelpPopoverButton(text: "You can also hold ⌥ (Option key) at any time to toggle force kill on demand.")
-            }
-
             row(label: "Reset:") {
                 Button("Reset all") {
                     viewState.showResetConfirmation = true
@@ -476,7 +469,6 @@ struct GeneralTabCloneView: View {
                 HelpPopoverButton(text: "The nuclear option! Wipes your preferences clean back to factory fresh. No hard feelings. 🧼💥")
             }
 
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 20)
         .padding(.top, 14)
@@ -511,5 +503,74 @@ struct GeneralTabCloneView: View {
             }
         }
         .animation(.easeInOut(duration: 0.18), value: viewState.showResetConfirmation)
+    }
+}
+
+struct MonitoringTabView: View {
+    @EnvironmentObject private var configStore: ConfigStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            row(label: "Discovery:") {
+                toggle("Include UDP listeners", isOn: Binding(
+                    get: { configStore.config.includeUDP },
+                    set: { enabled in
+                        configStore.config.includeUDP = enabled
+                        configStore.save()
+                        Task { await AppListViewModel.shared.refresh() }
+                    }
+                ))
+            } help: {
+                HelpPopoverButton(text: "Include UDP sockets alongside TCP listeners. UDP discovery can show system and local network services.")
+            }
+
+            row(label: "Menu bar:") {
+                toggle("Show listener count", isOn: Binding(
+                    get: { configStore.config.showMenuBarCount },
+                    set: { enabled in
+                        configStore.config.showMenuBarCount = enabled
+                        configStore.save()
+                        StatusItemController.shared?.updateMenuBarCount(AppListViewModel.shared.visibleCount)
+                    }
+                ))
+            } help: {
+                HelpPopoverButton(text: "Show the current visible listener count beside the KillX menu bar icon.")
+            }
+
+            row(label: "Group by:") {
+                Picker("", selection: Binding(
+                    get: { configStore.config.grouping },
+                    set: { configStore.config.grouping = $0; configStore.save() }
+                )) {
+                    ForEach(ListenerGrouping.allCases, id: \.self) { mode in
+                        Text(mode.rawValue).tag(mode)
+                    }
+                }
+                .frame(width: 175, alignment: .leading)
+                .labelsHidden()
+            } help: {
+                HelpPopoverButton(text: "Group listeners by project directory, Docker container, or process tree.")
+            }
+
+            row(label: "Default signal:") {
+                Picker("", selection: Binding(
+                    get: { configStore.config.force == .force ? "Force (SIGKILL)" : "Graceful (SIGTERM)" },
+                    set: { configStore.config.force = ($0 == "Force (SIGKILL)" ? .force : .normal); configStore.save() }
+                )) {
+                    Text("Graceful (SIGTERM)").tag("Graceful (SIGTERM)")
+                    Text("Force (SIGKILL)").tag("Force (SIGKILL)")
+                }
+                .frame(width: 175, alignment: .leading)
+                .labelsHidden()
+            } help: {
+                HelpPopoverButton(text: "Choose the default signal. Hold ⌥ Option to use SIGKILL temporarily.")
+            }
+
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 14)
+        .padding(.bottom, 10)
+        .frame(width: 480, height: SettingsTab.monitoring.contentHeight, alignment: .topLeading)
+        .background(KillXTheme.paneBackground)
     }
 }
