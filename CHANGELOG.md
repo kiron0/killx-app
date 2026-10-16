@@ -2,6 +2,28 @@
 
 All notable changes to KillX macOS App will be documented in this file.
 
+## 1.0.3
+
+### Added
+
+- Dedicated Monitoring tab in Settings to configure UDP listening, menu bar badge count, listener grouping, and default kill signals.
+- Listener grouping support to organize active ports by Project directory, Docker container, or Process tree.
+- Port scan performance metrics, scan cycle caching, and background scan optimization.
+- Listener history tracking and watched port alerts.
+- Redacted system diagnostics export for troubleshooting port and process conflicts.
+- Comprehensive in-app help documentation covering monitoring, grouping, and port safety.
+
+### Changed
+
+- Streamlined menubar popover menu by moving monitoring preferences into the dedicated Settings tab.
+- Refined process path resolution with improved Homebrew path filtering (`/opt/homebrew`).
+- Optimized settings window tab dimensions and height transitions across macOS versions.
+
+### Fixed
+
+- Resolved Homebrew process resolution edge cases when binaries run from opt symlink paths.
+- Fixed settings tab transitions and layout height calculations.
+
 ## 1.0.2
 
 ### Added
