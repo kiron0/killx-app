@@ -69,12 +69,20 @@ final class AppUpdateWindowController: NSObject, NSWindowDelegate {
         window?.close()
         window = nil
         UpdateChecker.shared.resetState()
+        if case .idle = UpdateDownloadService.shared.state {
+            UpdateDownloadService.shared.reset()
+        }
         WindowActivationCoordinator.update()
     }
 
     func windowWillClose(_ notification: Notification) {
         window = nil
         UpdateChecker.shared.resetState()
+        if case .idle = UpdateDownloadService.shared.state {
+            UpdateDownloadService.shared.reset()
+        } else if case .failed = UpdateDownloadService.shared.state {
+            UpdateDownloadService.shared.reset()
+        }
         WindowActivationCoordinator.update()
     }
 }

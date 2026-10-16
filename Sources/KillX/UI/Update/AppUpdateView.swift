@@ -2,6 +2,7 @@ import AppKit
 import SwiftUI
 
 struct AppUpdateView: View {
+    @ObservedObject var service = UpdateDownloadService.shared
     @ObservedObject var checker = UpdateChecker.shared
     var onDismiss: () -> Void
 
@@ -49,6 +50,9 @@ struct AppUpdateView: View {
     }
 
     private var headerTitle: String {
+        if service.state != .idle {
+            return "Update"
+        }
         if case .available = checker.checkState {
             return "Update Available"
         }
@@ -59,95 +63,203 @@ struct AppUpdateView: View {
         ZStack(alignment: .bottomTrailing) {
             KillXAppIconView(size: 60, cornerRadius: 13)
 
-            switch checker.checkState {
-            case .checking:
-                ProgressView()
-                    .controlSize(.small)
-                    .offset(x: 4, y: 4)
-                    .transition(.scale.combined(with: .opacity))
-            case .upToDate:
-                Image(systemName: "checkmark.circle.fill")
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, Color.green)
-                    .font(.system(size: 18, weight: .bold))
-                    .offset(x: 4, y: 4)
-                    .transition(.scale.combined(with: .opacity))
-            case .available:
-                Image(systemName: "arrow.down.circle.fill")
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, KillXTheme.accent)
-                    .font(.system(size: 18, weight: .bold))
-                    .offset(x: 4, y: 4)
-                    .transition(.scale.combined(with: .opacity))
-            case .failed:
-                Image(systemName: "exclamationmark.circle.fill")
-                    .symbolRenderingMode(.palette)
-                    .foregroundStyle(.white, Color.red)
-                    .font(.system(size: 18, weight: .bold))
-                    .offset(x: 4, y: 4)
-                    .transition(.scale.combined(with: .opacity))
-            case .idle:
-                EmptyView()
+            if service.state != .idle {
+                if case .ready = service.state {
+                    Image(systemName: "checkmark.circle.fill")
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, Color.green)
+                        .font(.system(size: 18, weight: .bold))
+                        .offset(x: 4, y: 4)
+                        .transition(.scale.combined(with: .opacity))
+                } else if case .failed = service.state {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, Color.red)
+                        .font(.system(size: 18, weight: .bold))
+                        .offset(x: 4, y: 4)
+                        .transition(.scale.combined(with: .opacity))
+                }
+            } else {
+                switch checker.checkState {
+                case .checking:
+                    ProgressView()
+                        .controlSize(.small)
+                        .offset(x: 4, y: 4)
+                        .transition(.scale.combined(with: .opacity))
+                case .upToDate:
+                    Image(systemName: "checkmark.circle.fill")
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, Color.green)
+                        .font(.system(size: 18, weight: .bold))
+                        .offset(x: 4, y: 4)
+                        .transition(.scale.combined(with: .opacity))
+                case .available:
+                    Image(systemName: "arrow.down.circle.fill")
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, KillXTheme.accent)
+                        .font(.system(size: 18, weight: .bold))
+                        .offset(x: 4, y: 4)
+                        .transition(.scale.combined(with: .opacity))
+                case .failed:
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, Color.red)
+                        .font(.system(size: 18, weight: .bold))
+                        .offset(x: 4, y: 4)
+                        .transition(.scale.combined(with: .opacity))
+                case .idle:
+                    EmptyView()
+                }
             }
         }
     }
 
     private var titleSection: some View {
         VStack(alignment: .leading, spacing: 2) {
-            switch checker.checkState {
-            case .checking, .idle:
-                Text("Checking for Updates...")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.primary)
-            case .upToDate:
-                Text("You're Up to Date!")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.primary)
-            case .available(let version, _):
-                Text("KillX v\(version) Available")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.primary)
-            case .failed:
-                Text("Unable to Check for Updates")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Color.primary)
+            if service.state != .idle {
+                switch service.state {
+                case .idle:
+                    EmptyView()
+                case .downloading:
+                    Text("Downloading v\(service.targetVersion)...")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.primary)
+                case .extracting:
+                    Text("Verifying Update...")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.primary)
+                case .ready:
+                    Text("Ready to Install v\(service.targetVersion)")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.primary)
+                case .failed:
+                    Text("Update Failed")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.primary)
+                }
+            } else {
+                switch checker.checkState {
+                case .checking, .idle:
+                    Text("Checking for Updates...")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.primary)
+                case .upToDate:
+                    Text("You're Up to Date!")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.primary)
+                case .available(let version, _, _):
+                    Text("KillX v\(version) Available")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.primary)
+                case .failed:
+                    Text("Unable to Check for Updates")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(Color.primary)
+                }
             }
         }
     }
 
     @ViewBuilder
     private var contentSection: some View {
-        switch checker.checkState {
-        case .checking, .idle:
-            Text("Checking for newer versions of KillX...")
-                .font(.system(size: 11.5))
-                .foregroundStyle(Color.secondary)
+        if service.state != .idle {
+            switch service.state {
+            case .idle:
+                EmptyView()
+            case .downloading(let progress, let bytesDownloaded, let totalBytes, let speed):
+                VStack(alignment: .leading, spacing: 6) {
+                    ProgressView(value: progress)
+                        .progressViewStyle(.linear)
+                        .tint(KillXTheme.accent)
+
+                    HStack {
+                        if totalBytes > 0 {
+                            Text("\(UpdateDownloadService.formatBytes(bytesDownloaded)) of \(UpdateDownloadService.formatBytes(totalBytes))")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.secondary)
+                        } else {
+                            Text("\(UpdateDownloadService.formatBytes(bytesDownloaded)) downloaded")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.secondary)
+                        }
+
+                        Spacer()
+
+                        if !speed.isEmpty {
+                            Text(speed)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(Color.secondary)
+                        }
+                    }
+                }
                 .padding(.top, 4)
 
-        case .upToDate(let version):
-            VStack(alignment: .leading, spacing: 4) {
-                Text("KillX v\(version) is currently the newest version available.")
+            case .extracting:
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        ProgressView()
+                            .controlSize(.small)
+                        Text("Extracting and verifying package contents...")
+                            .font(.system(size: 11.5))
+                            .foregroundStyle(Color.secondary)
+                    }
+                }
+                .padding(.top, 6)
+
+            case .ready:
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("The latest version has been downloaded and verified.")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Color.primary.opacity(0.85))
+
+                    Text("KillX will restart to finish installing the update.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.secondary)
+                }
+                .padding(.top, 4)
+
+            case .failed(let message):
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(message)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.red.opacity(0.9))
+                        .lineLimit(3)
+                }
+                .padding(.top, 4)
+            }
+        } else {
+            switch checker.checkState {
+            case .checking, .idle:
+                Text("Checking for newer versions of KillX...")
                     .font(.system(size: 11.5))
                     .foregroundStyle(Color.secondary)
-            }
-            .padding(.top, 4)
+                    .padding(.top, 4)
 
-        case .available(let version, _):
-            VStack(alignment: .leading, spacing: 4) {
-                Text("KillX v\(version) is available. You currently have v\(checker.currentVersion).")
-                    .font(.system(size: 11.5))
-                    .foregroundStyle(Color.secondary)
-            }
-            .padding(.top, 4)
+            case .upToDate(let version):
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("KillX v\(version) is currently the newest version available.")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Color.secondary)
+                }
+                .padding(.top, 4)
 
-        case .failed(let message):
-            VStack(alignment: .leading, spacing: 4) {
-                Text(message)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.secondary)
-                    .lineLimit(3)
+            case .available(let version, _, _):
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("KillX v\(version) is available. You currently have v\(checker.currentVersion).")
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Color.secondary)
+                }
+                .padding(.top, 4)
+
+            case .failed(let message):
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(message)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.secondary)
+                        .lineLimit(3)
+                }
+                .padding(.top, 4)
             }
-            .padding(.top, 4)
         }
     }
 
@@ -155,43 +267,86 @@ struct AppUpdateView: View {
         HStack(spacing: 10) {
             Spacer()
 
-            switch checker.checkState {
-            case .checking, .idle:
-                Button("Cancel") {
-                    onDismiss()
-                }
-                .buttonStyle(UpdateSecondaryButtonStyle())
+            if service.state != .idle {
+                switch service.state {
+                case .idle:
+                    EmptyView()
 
-            case .upToDate:
-                Button("OK") {
-                    onDismiss()
-                }
-                .buttonStyle(UpdatePrimaryButtonStyle(color: KillXTheme.accent))
-
-            case .available(_, let releaseURL):
-                Button("Later") {
-                    onDismiss()
-                }
-                .buttonStyle(UpdateSecondaryButtonStyle())
-
-                Button("Download Update") {
-                    NSWorkspace.shared.open(releaseURL)
-                    onDismiss()
-                }
-                .buttonStyle(UpdatePrimaryButtonStyle(color: KillXTheme.accent))
-
-            case .failed:
-                Button("Cancel") {
-                    onDismiss()
-                }
-                .buttonStyle(UpdateSecondaryButtonStyle())
-
-                Button("Retry") {
-                    Task {
-                        await checker.checkForUpdates(isUserInitiated: true)
+                case .downloading, .extracting:
+                    Button("Cancel") {
+                        service.cancelDownload()
+                        onDismiss()
                     }
+                    .buttonStyle(UpdateSecondaryButtonStyle())
+
+                case .ready(let stagedURL, _):
+                    Button("Later") {
+                        onDismiss()
+                    }
+                    .buttonStyle(UpdateSecondaryButtonStyle())
+
+                    Button("Restart & Update") {
+                        service.installAndRelaunch(stagedURL: stagedURL)
+                    }
+                    .buttonStyle(UpdatePrimaryButtonStyle(color: KillXTheme.accent))
+
+                case .failed:
+                    Button("Cancel") {
+                        onDismiss()
+                    }
+                    .buttonStyle(UpdateSecondaryButtonStyle())
+
+                    Button("Retry") {
+                        service.retryLastDownload()
+                    }
+                    .buttonStyle(UpdatePrimaryButtonStyle(color: KillXTheme.accent))
                 }
-                .buttonStyle(UpdatePrimaryButtonStyle(color: KillXTheme.accent))
+            } else {
+                switch checker.checkState {
+                case .checking, .idle:
+                    Button("Cancel") {
+                        onDismiss()
+                    }
+                    .buttonStyle(UpdateSecondaryButtonStyle())
+
+                case .upToDate:
+                    Button("OK") {
+                        onDismiss()
+                    }
+                    .buttonStyle(UpdatePrimaryButtonStyle(color: KillXTheme.accent))
+
+                case .available(let version, let downloadURL, let releaseURL):
+                    Button("Later") {
+                        onDismiss()
+                    }
+                    .buttonStyle(UpdateSecondaryButtonStyle())
+
+                    if let downloadURL {
+                        Button("Update Now") {
+                            service.startDownload(from: downloadURL, version: version)
+                        }
+                        .buttonStyle(UpdatePrimaryButtonStyle(color: KillXTheme.accent))
+                    } else {
+                        Button("Download Update") {
+                            NSWorkspace.shared.open(releaseURL)
+                            onDismiss()
+                        }
+                        .buttonStyle(UpdatePrimaryButtonStyle(color: KillXTheme.accent))
+                    }
+
+                case .failed:
+                    Button("Cancel") {
+                        onDismiss()
+                    }
+                    .buttonStyle(UpdateSecondaryButtonStyle())
+
+                    Button("Retry") {
+                        Task {
+                            await checker.checkForUpdates(isUserInitiated: true)
+                        }
+                    }
+                    .buttonStyle(UpdatePrimaryButtonStyle(color: KillXTheme.accent))
+                }
             }
         }
     }

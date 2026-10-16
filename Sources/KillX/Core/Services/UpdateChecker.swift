@@ -4,9 +4,21 @@ import Foundation
 enum UpdateCheckState: Equatable {
     case idle
     case checking
-    case available(version: String, releaseURL: URL)
+    case available(version: String, downloadURL: URL?, releaseURL: URL)
     case upToDate(version: String)
     case failed(message: String)
+}
+
+struct GitHubAsset: Decodable {
+    let name: String
+    let browser_download_url: String?
+}
+
+struct GitHubRelease: Decodable {
+    let tag_name: String
+    let html_url: String?
+    let name: String?
+    let assets: [GitHubAsset]?
 }
 
 @MainActor
@@ -67,24 +79,38 @@ final class UpdateChecker: ObservableObject {
                 return
             }
 
-            struct GitHubRelease: Decodable {
-                let tag_name: String
-                let html_url: String?
-                let name: String?
-            }
-
             let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
             let latestVersionRaw = release.tag_name.trimmingCharacters(in: CharacterSet(charactersIn: "vV "))
             let releaseURL = release.html_url.flatMap { URL(string: $0) } ?? releasesWebURL
+            let downloadURL = Self.selectAssetURL(from: release.assets)
 
             if isVersion(latestVersionRaw, greaterThan: currentVersion) {
-                handleUpdateAvailable(latestVersion: latestVersionRaw, releaseURL: releaseURL, isUserInitiated: isUserInitiated)
+                handleUpdateAvailable(latestVersion: latestVersionRaw, downloadURL: downloadURL, releaseURL: releaseURL, isUserInitiated: isUserInitiated)
             } else {
                 handleUpToDate(isUserInitiated: isUserInitiated)
             }
         } catch {
             handleError(message: "Could not connect to GitHub. Please check your connection and try again.", isUserInitiated: isUserInitiated)
         }
+    }
+
+    nonisolated static func selectAssetURL(from assets: [GitHubAsset]?) -> URL? {
+        guard let assets, !assets.isEmpty else { return nil }
+        func secure(_ s: String?) -> URL? {
+            guard let s, let url = URL(string: s),
+                  url.scheme?.lowercased() == "https",
+                  url.host != nil else { return nil }
+            return url
+        }
+        if let zip = assets.first(where: { $0.name.lowercased().hasSuffix(".zip") }),
+           let url = secure(zip.browser_download_url) {
+            return url
+        }
+        if let dmg = assets.first(where: { $0.name.lowercased().hasSuffix(".dmg") }),
+           let url = secure(dmg.browser_download_url) {
+            return url
+        }
+        return nil
     }
 
     func isVersion(_ v1: String, greaterThan v2: String) -> Bool {
@@ -101,8 +127,8 @@ final class UpdateChecker: ObservableObject {
         return false
     }
 
-    private func handleUpdateAvailable(latestVersion: String, releaseURL: URL, isUserInitiated: Bool) {
-        checkState = .available(version: latestVersion, releaseURL: releaseURL)
+    private func handleUpdateAvailable(latestVersion: String, downloadURL: URL?, releaseURL: URL, isUserInitiated: Bool) {
+        checkState = .available(version: latestVersion, downloadURL: downloadURL, releaseURL: releaseURL)
         if !isUserInitiated {
             AppUpdateWindowController.shared.showCheckWindow()
         }
