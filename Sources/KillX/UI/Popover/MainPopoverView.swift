@@ -271,25 +271,6 @@ struct MainPopoverView: View {
 
         if !vm.ports.isEmpty {
             menu.addItem(.separator())
-
-            menu.addItem(MenuHelper.makeItem(
-                title: "Save Current Ports as Profile…",
-                systemSymbolName: "folder.badge.plus",
-                action: { saveCurrentProfile() }
-            ))
-
-            if !configStore.config.profiles.isEmpty {
-                let profilesItem = NSMenuItem(title: "Select Project Profile", action: nil, keyEquivalent: "")
-                let profilesMenu = NSMenu()
-                for profile in configStore.config.profiles {
-                    profilesMenu.addItem(MenuHelper.makeItem(title: profile.name, action: {
-                        vm.applyProfile(profile)
-                    }))
-                }
-                profilesItem.submenu = profilesMenu
-                menu.addItem(profilesItem)
-            }
-
             menu.addItem(MenuHelper.makeItem(
                 title: "Export Redacted Diagnostics…",
                 systemSymbolName: "square.and.arrow.up",
@@ -398,16 +379,4 @@ struct MainPopoverView: View {
         }
     }
 
-    private func saveCurrentProfile() {
-        let alert = NSAlert()
-        alert.messageText = "Save Project Profile"
-        alert.informativeText = "Name this set of visible ports."
-        alert.addButton(withTitle: "Save")
-        alert.addButton(withTitle: "Cancel")
-        let field = NSTextField(string: "Project \(configStore.config.profiles.count + 1)")
-        field.frame = NSRect(x: 0, y: 0, width: 260, height: 24)
-        alert.accessoryView = field
-        guard alert.runModal() == .alertFirstButtonReturn else { return }
-        vm.saveProfile(name: field.stringValue)
-    }
 }

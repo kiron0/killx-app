@@ -148,19 +148,15 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
             ]
         ),
         KillXHelpTopic(
-            id: "project-profiles",
+            id: "listener-grouping",
             category: .features,
-            title: "Profiles & Grouping",
+            title: "Listener Grouping",
             symbol: "folder.fill",
-            summary: "Group listeners by project, Docker container, or process tree, and save named profiles.",
+            summary: "Group listeners by project, Docker container, or process tree.",
             sections: [
                 KillXHelpSection(
                     title: "Grouping Modes",
                     body: "Organize the port list by project workspace directory, Docker container, or parent process tree to manage complex multi-service stacks at a glance."
-                ),
-                KillXHelpSection(
-                    title: "Named Project Profiles",
-                    body: "Save sets of port numbers and directories as named profiles (e.g. Frontend Stack, Backend API) to quickly filter or terminate entire environments."
                 )
             ]
         ),

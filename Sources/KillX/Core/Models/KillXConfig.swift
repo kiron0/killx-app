@@ -1,13 +1,5 @@
 import Foundation
 
-struct ProjectProfile: Codable, Equatable, Identifiable {
-    var id: UUID = UUID()
-    var name: String
-    var ports: [Int]
-    var label: String
-    var directory: String?
-}
-
 enum ListenerGrouping: String, Codable, Equatable, CaseIterable {
     case none = "None"
     case project = "Project"
@@ -31,7 +23,6 @@ struct KillXConfig: Codable, Equatable {
     var includeUDP: Bool = false
     var grouping: ListenerGrouping = .none
     var showMenuBarCount: Bool = false
-    var profiles: [ProjectProfile] = []
 
     var disableQuitTips: Bool {
         get { disableTips }
@@ -46,7 +37,7 @@ struct KillXConfig: Codable, Equatable {
         case excludePorts, force, defaultSelectAll, autoUpdate
         case confirmKill, playSounds, disableTips, sortBy, dockerStopTimeout
         case liquidGlassEnabled
-        case watchedPorts, favoritePorts, includeUDP, grouping, showMenuBarCount, profiles
+        case watchedPorts, favoritePorts, includeUDP, grouping, showMenuBarCount
     }
 
     enum ForceMode: String, Codable, Equatable { case normal, force }
@@ -88,8 +79,7 @@ struct KillXConfig: Codable, Equatable {
             favoritePorts: [],
             includeUDP: false,
             grouping: .none,
-            showMenuBarCount: false,
-            profiles: []
+            showMenuBarCount: false
         )
     }
 }
@@ -115,7 +105,6 @@ extension KillXConfig {
         includeUDP = (try? c.decodeIfPresent(Bool.self, forKey: .includeUDP)) ?? d.includeUDP
         grouping = (try? c.decodeIfPresent(ListenerGrouping.self, forKey: .grouping)) ?? d.grouping
         showMenuBarCount = (try? c.decodeIfPresent(Bool.self, forKey: .showMenuBarCount)) ?? d.showMenuBarCount
-        profiles = (try? c.decodeIfPresent([ProjectProfile].self, forKey: .profiles)) ?? d.profiles
     }
 
     private static func validPorts(_ ports: [Int]) -> [Int] {

@@ -150,30 +150,6 @@ final class AppListViewModel: ObservableObject {
         configStore.save()
     }
 
-    func saveProfile(name: String) {
-        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleanName.isEmpty else { return }
-        let visible = filteredPorts
-        let directory = visible.compactMap(\.cwd).first
-        let profile = ProjectProfile(
-            name: cleanName,
-            ports: Array(Set(visible.map(\.port))).sorted(),
-            label: cleanName,
-            directory: directory
-        )
-        configStore.config.profiles.removeAll { $0.name.caseInsensitiveCompare(cleanName) == .orderedSame }
-        configStore.config.profiles.append(profile)
-        configStore.save()
-        showToastMessage("Saved profile \(cleanName)")
-    }
-
-    func applyProfile(_ profile: ProjectProfile) {
-        let ports = Set(profile.ports)
-        selectedPorts = Set(self.ports.filter { ports.contains($0.port) }.map(\.id))
-        searchQuery = ""
-        showToastMessage("Selected \(selectedPorts.count) ports from \(profile.name)")
-    }
-
     var visibleCount: Int {
         filteredPorts.count
     }
