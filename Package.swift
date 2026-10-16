@@ -3,7 +3,33 @@ import PackageDescription
 import Foundation
 
 let cltTestingFrameworkPath = "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"
-let needsCLTTestingSearchPath = FileManager.default.fileExists(
+
+let isXcodeActive: Bool = {
+    if let devDir = ProcessInfo.processInfo.environment["DEVELOPER_DIR"], devDir.contains(".app") {
+        return true
+    }
+    if ProcessInfo.processInfo.environment["XCODE_VERSION_ACTUAL"] != nil {
+        return true
+    }
+    let pipe = Pipe()
+    let process = Process()
+    process.executableURL = URL(fileURLWithPath: "/usr/bin/xcode-select")
+    process.arguments = ["-p"]
+    process.standardOutput = pipe
+    do {
+        try process.run()
+        process.waitUntilExit()
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        if let output = String(data: data, encoding: .utf8) {
+            return output.contains(".app")
+        }
+    } catch {
+        return false
+    }
+    return false
+}()
+
+let needsCLTTestingSearchPath = !isXcodeActive && FileManager.default.fileExists(
     atPath: cltTestingFrameworkPath + "/Testing.framework"
 )
 

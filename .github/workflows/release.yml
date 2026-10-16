@@ -61,6 +61,7 @@ jobs:
           fi
           echo "Selected: $XCODE_APP"
           sudo xcode-select -s "$XCODE_APP/Contents/Developer"
+          echo "DEVELOPER_DIR=$XCODE_APP/Contents/Developer" >> "$GITHUB_ENV"
 
       - name: Run Tests
         run: swift test || swift test --build-system native
