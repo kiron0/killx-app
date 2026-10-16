@@ -64,6 +64,33 @@ struct SettingsTabTests {
         }
     }
 
+    @Test("KillXHelpTopic topics and search integrity")
+    func testHelpTopicsIntegrity() {
+        let topics = KillXHelpTopic.all
+        #expect(topics.count >= 13)
+
+        var seenIDs = Set<String>()
+        for topic in topics {
+            #expect(!seenIDs.contains(topic.id))
+            seenIDs.insert(topic.id)
+            #expect(!topic.title.isEmpty)
+            #expect(!topic.symbol.isEmpty)
+            #expect(!topic.summary.isEmpty)
+            #expect(!topic.sections.isEmpty)
+            #expect(!topic.searchableContent.localizedCaseInsensitiveContains("killx.js.org"))
+            #expect(!topic.searchableContent.localizedCaseInsensitiveContains("killx website"))
+        }
+
+        let quickStart = topics.first { $0.id == "quick-start" }
+        #expect(quickStart != nil)
+        #expect(quickStart?.matches("search") == true)
+        #expect(quickStart?.matches("xyznonexistentterm") == false)
+
+        let watching = topics.first { $0.id == "port-watching" }
+        #expect(watching != nil)
+        #expect(watching?.matches("notifications") == true)
+    }
+
     @Test("ConfigStore add and remove excluded ports")
     @MainActor
     func testConfigStoreExcludePorts() {

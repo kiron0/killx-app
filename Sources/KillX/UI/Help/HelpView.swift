@@ -65,78 +65,170 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
             sections: [
                 KillXHelpSection(
                     title: "Open KillX",
-                    body: "Click the KillX menu bar icon or press the configured global shortcut. Type in the search box to filter ports by number, process name, or directory."
+                    body: "Click the KillX menu bar icon or press your configured global shortcut. The popover instantly lists all active listening ports with real-time CPU and memory metrics."
                 ),
                 KillXHelpSection(
-                    title: "Choose ports",
-                    body: "Select individual port checkboxes, or click the master checkbox beside the search box to select or deselect all visible ports."
+                    title: "Filter & Select",
+                    body: "Search by port number, process name, PID, or working directory. Toggle individual checkboxes or use the master checkbox to select all visible matching ports."
                 ),
                 KillXHelpSection(
-                    title: "Kill ports",
-                    body: "Click the primary button to terminate selected ports, or click the power icon on any port row to kill that specific process immediately."
+                    title: "Kill Ports",
+                    body: "Click the primary action button to terminate all selected ports, or click the kill button on any port row to terminate a single listener."
                 )
             ]
         ),
         KillXHelpTopic(
             id: "port-list",
             category: .essentials,
-            title: "Port List & Row Actions",
+            title: "Port List & Actions",
             symbol: "network",
-            summary: "Understand port numbers, Docker tags, and row options.",
+            summary: "Understand bind addresses, process trees, quick actions, and row menus.",
             sections: [
                 KillXHelpSection(
-                    title: "Port numbers & Process info",
-                    body: "Each row displays the port number (e.g. :3000) and app name, while Docker-bound ports show a docker tag."
+                    title: "Process & Address Badges",
+                    body: "Each row displays the port number, bind address exposure (Localhost, LAN, or All Interfaces), process name, PID, and live resource usage. Docker containers show dedicated container tags."
                 ),
                 KillXHelpSection(
-                    title: "Row options menu",
-                    body: "Click the three-dot button on any row for quick actions: view Port Details, Trace Process Tree, Copy Port Number, Copy PID, or Open in Browser (http://localhost:port)."
+                    title: "Row Context Menu",
+                    body: "Click the three-dot button on any row for quick actions:",
+                    bullets: [
+                        "View Port Details & process tree hierarchy",
+                        "Copy Port Number, PID, or restart command",
+                        "Open Terminal at listener working directory (CWD)",
+                        "Open in Browser (http://localhost:port)",
+                        "Add port to Exclude List or Favorites"
+                    ]
                 ),
                 KillXHelpSection(
-                    title: "Killing a port",
-                    body: "Kill frees the port for good: it stops the supervising process (npm, vite, cargo, ts-node-dev) together with all its child processes, so a watcher cannot re-open the port."
+                    title: "Favorites & Quick Access",
+                    body: "Star frequently monitored ports to pin them at the top of the list for quick access and batch operations."
                 )
             ]
         ),
         KillXHelpTopic(
             id: "kill-modes",
             category: .features,
-            title: "Kill Signals & Modes",
+            title: "Kill Signals & Termination",
             symbol: "power",
-            summary: "Choose graceful SIGTERM shutdown or immediate SIGKILL force termination.",
+            summary: "Graceful SIGTERM, interrupt SIGINT, and immediate SIGKILL force termination.",
             sections: [
                 KillXHelpSection(
-                    title: "Graceful kill (SIGTERM)",
-                    body: "SIGTERM asks the process to exit cleanly, close database connections, and release ports. This is the default safe mode."
+                    title: "Graceful Kill (SIGTERM)",
+                    body: "SIGTERM asks the process to exit cleanly, finish active requests, and release ports. This is the default safe mode."
                 ),
                 KillXHelpSection(
-                    title: "Force kill (SIGKILL)",
-                    body: "Hold ⌥ Option while clicking any kill button to force terminate immediately with SIGKILL. You can also change the default signal in Settings."
+                    title: "Interrupt Signal (SIGINT)",
+                    body: "Sends Ctrl+C interrupt signals to processes that respond better to interactive cancellation."
                 ),
                 KillXHelpSection(
-                    title: "Confirmation alerts",
-                    body: "When safety confirmations are enabled in Settings, KillX displays a clean in-popover confirmation card before terminating processes."
+                    title: "Force Kill (SIGKILL)",
+                    body: "Hold ⌥ Option while clicking any kill button to force terminate immediately with SIGKILL, bypassing unresponsive loops."
+                ),
+                KillXHelpSection(
+                    title: "Process Tree & PID Verification",
+                    body: "KillX terminates the supervisor and all child processes so file watchers (nodemon, cargo watch, vite) cannot re-bind the port. PID identity checks prevent signaling recycled process IDs."
+                )
+            ]
+        ),
+        KillXHelpTopic(
+            id: "port-watching",
+            category: .features,
+            title: "Port Watching & Alerts",
+            symbol: "eye.fill",
+            summary: "Watch critical ports and receive system notifications on state or owner changes.",
+            sections: [
+                KillXHelpSection(
+                    title: "Watch Selected Ports",
+                    body: "Enable port watching to monitor specific development ports in the background. KillX alerts you when a port is claimed, closed, or switched to a different process."
+                ),
+                KillXHelpSection(
+                    title: "Menu Bar Listener Count",
+                    body: "Optionally show the active listening port count directly in your macOS menu bar next to the KillX icon."
+                )
+            ]
+        ),
+        KillXHelpTopic(
+            id: "project-profiles",
+            category: .features,
+            title: "Profiles & Grouping",
+            symbol: "folder.fill",
+            summary: "Group listeners by project, Docker container, or process tree, and save named profiles.",
+            sections: [
+                KillXHelpSection(
+                    title: "Grouping Modes",
+                    body: "Organize the port list by project workspace directory, Docker container, or parent process tree to manage complex multi-service stacks at a glance."
+                ),
+                KillXHelpSection(
+                    title: "Named Project Profiles",
+                    body: "Save sets of port numbers and directories as named profiles (e.g. Frontend Stack, Backend API) to quickly filter or terminate entire environments."
+                )
+            ]
+        ),
+        KillXHelpTopic(
+            id: "history-diagnostics",
+            category: .features,
+            title: "History & Diagnostics",
+            symbol: "clock.arrow.circlepath",
+            summary: "Review recent port bindings, termination audit logs, and export redacted diagnostics.",
+            sections: [
+                KillXHelpSection(
+                    title: "Listener & Kill History",
+                    body: "Track recently terminated ports, process names, timestamps, and termination results to easily audit what ran on your system."
+                ),
+                KillXHelpSection(
+                    title: "Terminal & Restart Command",
+                    body: "Copy the original startup command for any listener or launch a new Terminal window directly at the process working directory."
+                ),
+                KillXHelpSection(
+                    title: "Redacted Diagnostics",
+                    body: "Export sanitized diagnostic reports containing port bindings, platform versions, and scan metrics without exposing private tokens or environment variables."
+                )
+            ]
+        ),
+        KillXHelpTopic(
+            id: "network-exposure",
+            category: .features,
+            title: "Network Exposure & UDP",
+            symbol: "shield.lefthalf.filled",
+            summary: "Inspect bind-address scope, Docker bridges, and discover UDP listeners.",
+            sections: [
+                KillXHelpSection(
+                    title: "Bind Address Exposure",
+                    body: "KillX labels network interface exposure for every port:",
+                    bullets: [
+                        "Localhost (127.0.0.1 / ::1) - private to your Mac",
+                        "LAN (192.168.x.x / 10.x.x.x) - accessible on local network",
+                        "All Interfaces (* / 0.0.0.0) - exposed publicly on all adapters"
+                    ]
+                ),
+                KillXHelpSection(
+                    title: "UDP Port Discovery",
+                    body: "Toggle UDP listener discovery in Settings > General to monitor UDP services alongside standard TCP listeners."
+                ),
+                KillXHelpSection(
+                    title: "Docker Container Mapping",
+                    body: "KillX maps Docker container port bindings to their host endpoints and issues graceful docker stop commands when killing containerized services."
                 )
             ]
         ),
         KillXHelpTopic(
             id: "exclude",
             category: .features,
-            title: "Exclude Ports",
+            title: "Exclude & Safety Guardrails",
             symbol: "nosign",
-            summary: "Protect critical services and databases from accidental termination.",
+            summary: "Protect databases, development servers, and system daemons from accidental termination.",
             sections: [
                 KillXHelpSection(
-                    title: "Adding exclusions",
-                    body: "Choose Add to Exclude List from any port row menu, or configure excluded port numbers in Settings to protect background services."
+                    title: "Adding Exclusions",
+                    body: "Add port numbers to your Exclude List from any port row menu or in Settings > Exclude to ensure they are omitted from batch selection and kill commands."
                 ),
                 KillXHelpSection(
-                    title: "Protected operations",
-                    body: "Excluded ports are never killed during batch kills, preventing accidental disruption of your environment."
+                    title: "System & IDE Protections",
+                    body: "Critical macOS system daemons (mDNSResponder, rapportd, launchd, /System) and IDE processes (VS Code, Xcode, Cursor) are automatically protected and prevented from accidental termination."
                 ),
                 KillXHelpSection(
-                    title: "System protections",
-                    body: "macOS system daemons (rapportd, ControlCenter, mDNSResponder, launchd, /System/Library, /usr/libexec) and KillX itself are strictly protected and prevented from being listed or killed."
+                    title: "Confirmation Prompts",
+                    body: "When safety confirmations are enabled, KillX presents a confirmation summary before executing termination commands."
                 )
             ]
         ),
@@ -148,12 +240,20 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
             summary: "Configure global hotkeys and speed up port management.",
             sections: [
                 KillXHelpSection(
-                    title: "Global hotkeys",
-                    body: "Settings > Shortcuts allows recording custom global hotkeys for Toggle Popover, Kill Selected Ports, and Force Kill Selected Ports."
+                    title: "Global Hotkeys",
+                    body: "In Settings > Shortcuts, customize global hotkeys for Toggle Popover, Kill Selected Ports, and Force Kill Selected Ports."
                 ),
                 KillXHelpSection(
-                    title: "In-popover shortcuts",
-                    body: "Press ⌘A to select all, ⌘, for Settings, ⌘H for Help, Esc to cancel confirmation or close, and Return to confirm an action."
+                    title: "In-App Key Commands",
+                    body: "Within the popover:",
+                    bullets: [
+                        "⌘A - Select or deselect all visible ports",
+                        "⌘, - Open Settings",
+                        "⌘H - Open Help documentation",
+                        "⌥ (Option key) - Hold to switch to Force Kill mode",
+                        "Esc - Cancel confirmation or close popover",
+                        "Return - Confirm pending kill action"
+                    ]
                 )
             ]
         ),
@@ -162,15 +262,38 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
             category: .preferences,
             title: "Appearance & Themes",
             symbol: "paintbrush",
-            summary: "Customize window themes, Classic retro styling, and Liquid Glass translucency.",
+            summary: "Customize window styling with Classic solid or Liquid Glass translucent modes.",
             sections: [
                 KillXHelpSection(
                     title: "Signature Sky Blue Theme",
-                    body: "KillX features the signature sky blue aesthetic, high-contrast dark accents, and adaptive window backgrounds."
+                    body: "KillX features high-contrast dark accents, refined typography, and the signature sky blue accent theme."
                 ),
                 KillXHelpSection(
                     title: "Liquid Glass Mode",
-                    body: "On macOS 26+, choose Liquid Glass in Settings > General for translucent blur effects and modern glass depth."
+                    body: "On macOS 26+, choose Liquid Glass in Settings > General for translucent blur depth and floating window aesthetics."
+                )
+            ]
+        ),
+        KillXHelpTopic(
+            id: "settings-updates",
+            category: .preferences,
+            title: "Settings & Updates",
+            symbol: "gearshape.2",
+            summary: "Overview of General, Exclude, Shortcuts, About tabs, and version updates.",
+            sections: [
+                KillXHelpSection(
+                    title: "Preferences Tabs",
+                    body: "Settings is divided into 4 focused tabs:",
+                    bullets: [
+                        "General - Startup at login, sounds, safety confirmation, sort order, and default signals",
+                        "Exclude - Manage protected port list",
+                        "Shortcuts - Global keyboard hotkey recorder",
+                        "About - Version information, update checking, contact, and factory reset"
+                    ]
+                ),
+                KillXHelpSection(
+                    title: "Checking for Updates",
+                    body: "Click Check Updates in Settings > About to verify your installed version against the latest GitHub release. Release disk images and archives are linked directly."
                 )
             ]
         ),
@@ -179,19 +302,36 @@ struct KillXHelpTopic: Identifiable, Hashable, Sendable {
             category: .support,
             title: "Troubleshooting & FAQ",
             symbol: "wrench.and.screwdriver",
-            summary: "Resolve permission issues, stubborn system ports, and hung listeners.",
+            summary: "Resolve permission errors, stubborn listeners, and Docker conflicts.",
             sections: [
                 KillXHelpSection(
-                    title: "Root or system ports",
-                    body: "Ports owned by root or system daemons (such as Apache or mDNSResponder) may require administrator privileges to terminate."
+                    title: "Root or System Ports",
+                    body: "Ports owned by root or macOS system processes may require administrator permissions. If termination fails, run with elevated privileges or inspect the process owner in Port Details."
                 ),
                 KillXHelpSection(
-                    title: "Docker container ports",
-                    body: "Killing a Docker-bound port will issue a graceful docker stop command to shut down the container cleanly."
+                    title: "Port Re-binding by Watchers",
+                    body: "If a port immediately reopens after being killed, hold Option and click Force Kill. This terminates the supervising watcher (npm, nodemon, cargo) together with all child processes."
                 ),
                 KillXHelpSection(
-                    title: "Port still bound after kill",
-                    body: "If a port remains bound, hold Option and click Force Kill to send SIGKILL to the process and its supervisor."
+                    title: "Homebrew Services",
+                    body: "When terminating services managed by Homebrew (such as PostgreSQL, MySQL, or MongoDB), KillX matches the canonical formula and safely instructs Homebrew to stop the background service."
+                )
+            ]
+        ),
+        KillXHelpTopic(
+            id: "privacy-support",
+            category: .support,
+            title: "Privacy & Support",
+            symbol: "hand.raised.fill",
+            summary: "100% local operation, zero tracking, and direct developer support.",
+            sections: [
+                KillXHelpSection(
+                    title: "100% Local Privacy",
+                    body: "KillX operates entirely on your Mac. No network telemetry, analytics, tracking, or process data is ever collected or transmitted."
+                ),
+                KillXHelpSection(
+                    title: "Direct Support & Issues",
+                    body: "Report bugs or suggest features directly on GitHub Issues, or click Contact Support in Settings > About to reach the developer directly."
                 )
             ]
         )
@@ -468,14 +608,14 @@ struct HelpView: View {
     private func footerLinks(for topic: KillXHelpTopic) -> some View {
         HStack(spacing: 8) {
             switch topic.id {
-            case "quick-start":
-                Button("Open Settings") {
-                    SettingsWindowController.shared.show()
-                }
-
-            case "port-list":
+            case "quick-start", "port-list", "kill-modes", "port-watching", "network-exposure", "appearance":
                 Button("General Settings") {
                     SettingsWindowController.shared.show(tab: .general)
+                }
+
+            case "exclude":
+                Button("Exclude Settings") {
+                    SettingsWindowController.shared.show(tab: .exclude)
                 }
 
             case "shortcuts":
@@ -483,9 +623,16 @@ struct HelpView: View {
                     SettingsWindowController.shared.show(tab: .shortcuts)
                 }
 
-            case "appearance":
+            case "settings-updates":
                 Button("Open Settings") {
-                    SettingsWindowController.shared.show(tab: .general)
+                    SettingsWindowController.shared.show()
+                }
+
+            case "privacy-support":
+                Button("Contact Support") {
+                    if let url = KillXConstants.contactURL() {
+                        NSWorkspace.shared.open(url)
+                    }
                 }
 
             default:
@@ -498,12 +645,6 @@ struct HelpView: View {
 
             Button("GitHub Issues") {
                 if let url = URL(string: "https://github.com/kiron0/killx-app/issues") {
-                    NSWorkspace.shared.open(url)
-                }
-            }
-
-            Button("KillX Website") {
-                if let url = URL(string: "https://killx.js.org") {
                     NSWorkspace.shared.open(url)
                 }
             }
