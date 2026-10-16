@@ -418,8 +418,11 @@ public final class PortService {
         if let cellarIndex = parts.firstIndex(of: "Cellar"), parts.count > cellarIndex + 1 {
             return String(parts[cellarIndex + 1])
         }
-        if let optIndex = parts.firstIndex(of: "opt"), parts.count > optIndex + 1 {
-            return String(parts[optIndex + 1])
+        if let optIndex = parts.lastIndex(of: "opt"), parts.count > optIndex + 1 {
+            let candidate = String(parts[optIndex + 1])
+            if candidate != "homebrew" {
+                return candidate
+            }
         }
         return nil
     }
