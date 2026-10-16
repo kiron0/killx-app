@@ -1,5 +1,6 @@
 import Testing
 import Foundation
+import AppKit
 @testable import KillX
 
 @Suite("PortService Tests")
@@ -102,6 +103,58 @@ struct PortServiceTests {
             executablePath: "/tmp/mongod",
             arguments: ["/tmp/mongod"]
         ))
+        #expect(!PortService.homebrewServiceMatches(
+            executablePath: "/opt/homebrew/Cellar/postgresql@14/14.12/bin/postgres",
+            arguments: ["/opt/homebrew/opt/postgresql@16/bin/postgres"]
+        ))
+    }
+
+    @Test("lsof parser handles IPv4, IPv6, UDP, and malformed records")
+    func testListenerParsing() {
+        let fixture = """
+        p101
+        cnode
+        Ldev
+        PTCP
+        n127.0.0.1:3000
+        TST=LISTEN
+        n[::]:3001
+        p202
+        cmDNS
+        Ldev
+        PUDP
+        n*:5353
+        pbad
+        nmalformed
+        """
+        let parsed = PortService.shared.parseLsofOutput(fixture)
+        #expect(parsed.count == 3)
+        #expect(parsed[0].port == 3000)
+        #expect(parsed[0].address == "127.0.0.1")
+        #expect(parsed[1].port == 3001)
+        #expect(parsed[1].address == "::")
+        #expect(parsed[2].proto == "UDP")
+        #expect(parsed[2].port == 5353)
+    }
+
+    @Test("process identity rejects PID, executable, or start-time changes")
+    func testProcessIdentityMatching() {
+        let expected = ProcessIdentitySnapshot(pid: 42, executablePath: "/bin/node", startTime: 10)
+        #expect(PortService.identitiesMatch(expected: expected, current: expected))
+        #expect(!PortService.identitiesMatch(expected: expected, current: .init(pid: 43, executablePath: "/bin/node", startTime: 10)))
+        #expect(!PortService.identitiesMatch(expected: expected, current: .init(pid: 42, executablePath: "/bin/python", startTime: 10)))
+        #expect(!PortService.identitiesMatch(expected: expected, current: .init(pid: 42, executablePath: "/bin/node", startTime: 11)))
+    }
+
+    @Test("parser remains bounded at large process counts", arguments: [50, 500, 5_000])
+    func testParserPerformance(count: Int) {
+        let fixture = (0..<count).map { index in
+            "p\(index + 100)\ncnode\nLdev\nPTCP\nn127.0.0.1:\(10_000 + index)\nTST=LISTEN"
+        }.joined(separator: "\n")
+        let started = Date()
+        let result = PortService.shared.parseLsofOutput(fixture)
+        #expect(result.count == count)
+        #expect(Date().timeIntervalSince(started) < 5)
     }
 }
 
@@ -121,20 +174,56 @@ struct DockerServiceTests {
         #expect(docker.publishedPort == 6379)
         #expect(docker.containerId == "abcd1234efgh")
     }
+
+    @Test("Docker published ranges parse without IPv6 duplicates")
+    func testDockerRanges() {
+        let ports = DockerService.shared.extractPorts(from: "0.0.0.0:8000-8002->80-82/tcp, :::8000->80/tcp")
+        #expect(ports == [8000, 8001, 8002, 8000])
+    }
+}
+
+@Suite("Port watch and diagnostics tests")
+struct PortWatchAndDiagnosticsTests {
+    @Test("Watch detects open, close, and owner change")
+    func testWatchEvents() {
+        let old = [PortInfo(port: 3000, pid: 1_001, processName: "node")]
+        let changed = [PortInfo(port: 3000, pid: 1_002, processName: "bun"), PortInfo(port: 8080, pid: 2_001, processName: "python")]
+        let events = ListenerWatchService.events(previous: old, current: changed, watched: [3000, 8080, 9000])
+        #expect(events.map(\.kind) == [.ownerChanged, .opened])
+        let closed = ListenerWatchService.events(previous: changed, current: [], watched: [3000])
+        #expect(closed.first?.kind == .closed)
+    }
+
+    @Test("Diagnostics redact secrets")
+    func testRedaction() {
+        let value = ListenerHistoryStore.redact("token=abc password=hunter2 API_KEY=xyz")
+        #expect(!value.contains("abc"))
+        #expect(!value.contains("hunter2"))
+        #expect(!value.contains("xyz"))
+        #expect(value.contains("<redacted>"))
+    }
+}
+
+@Suite("App icon request race tests")
+@MainActor
+struct AppIconRequestRaceTests {
+    @Test("Stale icon result cannot replace latest request")
+    func testStaleIconResult() {
+        let loader = AppIconLoader()
+        let first = loader.beginRequest()
+        let second = loader.beginRequest()
+        let latest = NSImage(size: NSSize(width: 2, height: 2))
+        loader.accept(latest, generation: second)
+        loader.accept(NSImage(size: NSSize(width: 1, height: 1)), generation: first)
+        #expect(loader.icon === latest)
+    }
 }
 
 @Suite("SoundService Tests")
 struct SoundServiceTests {
-    @Test("Play sounds when sounds enabled or disabled does not crash")
+    @Test("Disabled test audio does not crash")
     func testPlaySounds() {
         SoundService.isAudioDisabledForTesting = true
-        ConfigStore.shared.config.playSounds = true
-        SoundService.playKillSingle()
-        SoundService.playKillAll()
-        SoundService.playQuitSingle()
-        SoundService.playQuitAll()
-
-        ConfigStore.shared.config.playSounds = false
         SoundService.playKillSingle()
         SoundService.playKillAll()
         SoundService.playQuitSingle()

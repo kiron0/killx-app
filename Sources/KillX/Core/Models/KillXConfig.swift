@@ -1,5 +1,20 @@
 import Foundation
 
+struct ProjectProfile: Codable, Equatable, Identifiable {
+    var id: UUID = UUID()
+    var name: String
+    var ports: [Int]
+    var label: String
+    var directory: String?
+}
+
+enum ListenerGrouping: String, Codable, Equatable, CaseIterable {
+    case none = "None"
+    case project = "Project"
+    case docker = "Docker"
+    case process = "Process"
+}
+
 struct KillXConfig: Codable, Equatable {
     var excludePorts: [Int]
     var force: ForceMode
@@ -11,6 +26,12 @@ struct KillXConfig: Codable, Equatable {
     var sortBy: SortBy
     var dockerStopTimeout: Int
     var liquidGlassEnabled: Bool = true
+    var watchedPorts: [Int] = []
+    var favoritePorts: [Int] = []
+    var includeUDP: Bool = false
+    var grouping: ListenerGrouping = .none
+    var showMenuBarCount: Bool = false
+    var profiles: [ProjectProfile] = []
 
     var disableQuitTips: Bool {
         get { disableTips }
@@ -25,6 +46,7 @@ struct KillXConfig: Codable, Equatable {
         case excludePorts, force, defaultSelectAll, autoUpdate
         case confirmKill, playSounds, disableTips, sortBy, dockerStopTimeout
         case liquidGlassEnabled
+        case watchedPorts, favoritePorts, includeUDP, grouping, showMenuBarCount, profiles
     }
 
     enum ForceMode: String, Codable, Equatable { case normal, force }
@@ -61,7 +83,13 @@ struct KillXConfig: Codable, Equatable {
             disableTips: false,
             sortBy: .portAsc,
             dockerStopTimeout: 5,
-            liquidGlassEnabled: true
+            liquidGlassEnabled: true,
+            watchedPorts: [],
+            favoritePorts: [],
+            includeUDP: false,
+            grouping: .none,
+            showMenuBarCount: false,
+            profiles: []
         )
     }
 }
@@ -82,5 +110,15 @@ extension KillXConfig {
         let decodedTimeout = (try? c.decodeIfPresent(Int.self, forKey: .dockerStopTimeout)) ?? d.dockerStopTimeout
         dockerStopTimeout = min(max(decodedTimeout, 1), 60)
         liquidGlassEnabled = (try? c.decodeIfPresent(Bool.self, forKey: .liquidGlassEnabled)) ?? d.liquidGlassEnabled
+        watchedPorts = Self.validPorts((try? c.decodeIfPresent([Int].self, forKey: .watchedPorts)) ?? d.watchedPorts)
+        favoritePorts = Self.validPorts((try? c.decodeIfPresent([Int].self, forKey: .favoritePorts)) ?? d.favoritePorts)
+        includeUDP = (try? c.decodeIfPresent(Bool.self, forKey: .includeUDP)) ?? d.includeUDP
+        grouping = (try? c.decodeIfPresent(ListenerGrouping.self, forKey: .grouping)) ?? d.grouping
+        showMenuBarCount = (try? c.decodeIfPresent(Bool.self, forKey: .showMenuBarCount)) ?? d.showMenuBarCount
+        profiles = (try? c.decodeIfPresent([ProjectProfile].self, forKey: .profiles)) ?? d.profiles
+    }
+
+    private static func validPorts(_ ports: [Int]) -> [Int] {
+        Array(Set(ports.filter { (1...65535).contains($0) })).sorted()
     }
 }

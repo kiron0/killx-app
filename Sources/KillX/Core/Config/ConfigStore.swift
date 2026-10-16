@@ -7,11 +7,18 @@ final class ConfigStore: ObservableObject {
 
     private static let userDefaultsKey = "KillXConfig"
     private var lastListConfig: (exclude: [Int], sort: KillXConfig.SortBy)?
+    private let userDefaults: UserDefaults
+    private let enableAppSideEffects: Bool
 
-    private init() { load(); lastListConfig = (config.excludePorts, config.sortBy) }
+    init(userDefaults: UserDefaults = .standard, enableAppSideEffects: Bool = true) {
+        self.userDefaults = userDefaults
+        self.enableAppSideEffects = enableAppSideEffects
+        load()
+        lastListConfig = (config.excludePorts, config.sortBy)
+    }
 
     func load() {
-        guard let data = UserDefaults.standard.data(forKey: Self.userDefaultsKey),
+        guard let data = userDefaults.data(forKey: Self.userDefaultsKey),
               let decoded = try? JSONDecoder().decode(KillXConfig.self, from: data) else {
             return
         }
@@ -20,12 +27,13 @@ final class ConfigStore: ObservableObject {
 
     func save() {
         guard let json = try? JSONEncoder().encode(config) else { return }
-        UserDefaults.standard.set(json, forKey: Self.userDefaultsKey)
+        userDefaults.set(json, forKey: Self.userDefaultsKey)
 
         let current = (config.excludePorts, config.sortBy)
         if let lastListConfig, lastListConfig == current { return }
         lastListConfig = current
 
+        guard enableAppSideEffects else { return }
         Task { @MainActor in
             await AppListViewModel.shared.resort()
             StatusItemController.shared?.updatePopoverSize()

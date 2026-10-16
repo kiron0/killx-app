@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 private final class PopoverUIState: ObservableObject {
     @Published var isActionButtonHovered = false
@@ -268,6 +269,80 @@ struct MainPopoverView: View {
             }
         ))
 
+        let udpItem = MenuHelper.makeItem(
+            title: "Include UDP Listeners",
+            systemSymbolName: "network",
+            action: {
+                configStore.config.includeUDP.toggle()
+                configStore.save()
+                Task { await vm.refresh() }
+            }
+        )
+        udpItem.state = configStore.config.includeUDP ? .on : .off
+        menu.addItem(udpItem)
+
+        let countItem = MenuHelper.makeItem(
+            title: "Show Listener Count in Menu Bar",
+            systemSymbolName: "number.circle",
+            action: {
+                configStore.config.showMenuBarCount.toggle()
+                configStore.save()
+                StatusItemController.shared?.updateMenuBarCount(vm.visibleCount)
+            }
+        )
+        countItem.state = configStore.config.showMenuBarCount ? .on : .off
+        menu.addItem(countItem)
+
+        let groupingItem = NSMenuItem(title: "Group List", action: nil, keyEquivalent: "")
+        let groupingMenu = NSMenu()
+        for mode in ListenerGrouping.allCases {
+            let item = MenuHelper.makeItem(title: mode.rawValue, action: {
+                configStore.config.grouping = mode
+                configStore.save()
+            })
+            item.state = configStore.config.grouping == mode ? .on : .off
+            groupingMenu.addItem(item)
+        }
+        groupingItem.submenu = groupingMenu
+        menu.addItem(groupingItem)
+
+        menu.addItem(MenuHelper.makeItem(
+            title: "Save Current Ports as Profile…",
+            systemSymbolName: "folder.badge.plus",
+            action: { saveCurrentProfile() }
+        ))
+
+        if !configStore.config.profiles.isEmpty {
+            let profilesItem = NSMenuItem(title: "Select Project Profile", action: nil, keyEquivalent: "")
+            let profilesMenu = NSMenu()
+            for profile in configStore.config.profiles {
+                profilesMenu.addItem(MenuHelper.makeItem(title: profile.name, action: {
+                    vm.applyProfile(profile)
+                }))
+            }
+            profilesItem.submenu = profilesMenu
+            menu.addItem(profilesItem)
+        }
+
+        menu.addItem(MenuHelper.makeItem(
+            title: "Export Redacted Diagnostics…",
+            systemSymbolName: "square.and.arrow.up",
+            action: { exportDiagnostics() }
+        ))
+
+        menu.addItem(MenuHelper.makeItem(
+            title: "Copy Recent Listener History",
+            systemSymbolName: "clock.arrow.circlepath",
+            action: {
+                let text = ListenerHistoryStore.shared.entries.prefix(50).map {
+                    "\($0.date) :\($0.port) \($0.event) \($0.detail)"
+                }.joined(separator: "\n")
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(text, forType: .string)
+                vm.showToastMessage("Listener history copied")
+            }
+        ))
+
         menu.addItem(.separator())
 
         menu.addItem(MenuHelper.makeItem(
@@ -331,11 +406,36 @@ struct MainPopoverView: View {
     }
 
     private func optionsMenu() -> NSMenu {
-        if let menu = uiState.cachedOptionsMenu {
-            return menu
+        buildOptionsMenu()
+    }
+
+    private func exportDiagnostics() {
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "KillX-Diagnostics.txt"
+        panel.allowedContentTypes = [.plainText]
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        let report = ListenerHistoryStore.shared.diagnostics(
+            ports: vm.ports,
+            metrics: PortService.shared.lastScanMetrics
+        )
+        do {
+            try report.write(to: url, atomically: true, encoding: .utf8)
+            vm.showToastMessage("Diagnostics exported")
+        } catch {
+            vm.showToastMessage("Couldn't export diagnostics", isError: true)
         }
-        let menu = buildOptionsMenu()
-        uiState.cachedOptionsMenu = menu
-        return menu
+    }
+
+    private func saveCurrentProfile() {
+        let alert = NSAlert()
+        alert.messageText = "Save Project Profile"
+        alert.informativeText = "Name this set of visible ports."
+        alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: "Cancel")
+        let field = NSTextField(string: "Project \(configStore.config.profiles.count + 1)")
+        field.frame = NSRect(x: 0, y: 0, width: 260, height: 24)
+        alert.accessoryView = field
+        guard alert.runModal() == .alertFirstButtonReturn else { return }
+        vm.saveProfile(name: field.stringValue)
     }
 }

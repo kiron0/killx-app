@@ -49,7 +49,7 @@ public final class DockerService {
     }
 
     public func fetchContainers(forceRefresh: Bool = false) async -> [DockerInfo] {
-        if !forceRefresh, let cache = readCache(), Date().timeIntervalSince(cache.last) < 2.0 {
+        if !forceRefresh, let cache = readCache(), Date().timeIntervalSince(cache.last) < 15.0 {
             return cache.containers
         }
         if !forceRefresh, let until = unavailableUntil(), Date() < until {
@@ -125,7 +125,7 @@ public final class DockerService {
         return result != nil
     }
 
-    private func extractPorts(from portsStr: String) -> [Int] {
+    func extractPorts(from portsStr: String) -> [Int] {
         guard !portsStr.isEmpty else { return [] }
         var result: [Int] = []
         let mappings = portsStr.components(separatedBy: ",")

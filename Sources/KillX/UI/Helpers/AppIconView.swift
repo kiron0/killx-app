@@ -92,14 +92,28 @@ public enum AppIconCache {
 @MainActor
 public final class AppIconLoader: ObservableObject {
     @Published public var icon: NSImage?
+    private var generation = 0
+
+    @discardableResult
+    func beginRequest() -> Int {
+        generation += 1
+        return generation
+    }
+
+    func accept(_ loaded: NSImage?, generation requestGeneration: Int) {
+        guard generation == requestGeneration else { return }
+        icon = loaded
+    }
 
     public func load(bundleId: String?, pid: pid_t? = nil, url: URL? = nil) {
+        let requestGeneration = beginRequest()
         if let cached = AppIconCache.cachedIcon(for: bundleId, pid: pid, url: url) {
             self.icon = cached
             return
         }
+        icon = nil
         AppIconCache.loadIcon(for: bundleId, pid: pid, url: url) { [weak self] loaded in
-            self?.icon = loaded
+            self?.accept(loaded, generation: requestGeneration)
         }
     }
 }
@@ -145,6 +159,9 @@ public struct AppIconView: View {
         }
         .onChange(of: pid) { _, newPid in
             loader.load(bundleId: bundleId, pid: newPid, url: url)
+        }
+        .onChange(of: url) { _, newURL in
+            loader.load(bundleId: bundleId, pid: pid, url: newURL)
         }
     }
 }

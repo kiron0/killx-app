@@ -58,6 +58,8 @@ struct PortDetailsView: View {
                         detailRow(label: "Bundle Identifier", value: bundleId)
                     }
                     detailRow(label: "Port Number", value: String(port.port))
+                    detailRow(label: "Bind Address", value: port.bindAddress)
+                    detailRow(label: "Exposure", value: port.exposure.label)
                     detailRow(label: "Process ID", value: String(port.pid))
                     detailRow(label: "Process Name", value: port.processName)
 
@@ -224,7 +226,9 @@ struct PortDetailsView: View {
             "PID: \(port.pid)",
             "Process: \(port.processName)",
             "Protocol: \(port.protocolName)",
-            "State: \(port.state)"
+            "State: \(port.state)",
+            "Bind Address: \(port.bindAddress)",
+            "Exposure: \(port.exposure.label)"
         ]
         if let cwd = port.cwd, !cwd.isEmpty { lines.append("CWD: \(cwd)") }
         if !port.command.isEmpty { lines.append("Command: \(port.command)") }

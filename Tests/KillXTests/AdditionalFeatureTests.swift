@@ -67,7 +67,8 @@ struct SettingsTabTests {
     @Test("ConfigStore add and remove excluded ports")
     @MainActor
     func testConfigStoreExcludePorts() {
-        let store = ConfigStore.shared
+        let defaults = UserDefaults(suiteName: "KillXTests.exclude.\(UUID())")!
+        let store = ConfigStore(userDefaults: defaults, enableAppSideEffects: false)
         store.removeAllExcludedPorts()
         #expect(store.config.excludePorts.isEmpty)
 
@@ -148,7 +149,8 @@ struct AssetImagesTests {
 struct ConfigStoreTests {
     @Test("Shared instance exists and loads default")
     func testConfigStoreShared() {
-        let store = ConfigStore.shared
+        let defaults = UserDefaults(suiteName: "KillXTests.config.\(UUID())")!
+        let store = ConfigStore(userDefaults: defaults, enableAppSideEffects: false)
         #expect(store.config.autoUpdate == true)
     }
 
@@ -206,8 +208,10 @@ struct ShortcutManagerTests {
     @Test("Force kill all prompt configuration")
     @MainActor
     func testForceKillAllPrompt() {
-        let vm = AppListViewModel.shared
-        ConfigStore.shared.config.confirmKill = true
+        let defaults = UserDefaults(suiteName: "KillXTests.force.\(UUID())")!
+        let store = ConfigStore(userDefaults: defaults, enableAppSideEffects: false)
+        store.config.confirmKill = true
+        let vm = AppListViewModel(portService: StubPortService(), configStore: store)
         vm.ports = [
             PortInfo(port: 3000, pid: 1234, processName: "node"),
             PortInfo(port: 8080, pid: 5678, processName: "python")

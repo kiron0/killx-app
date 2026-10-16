@@ -49,6 +49,19 @@ final class StatusItemController: NSObject {
         button.target = self
     }
 
+    func updateMenuBarCount(_ count: Int) {
+        guard let button = statusItem.button else { return }
+        if ConfigStore.shared.config.showMenuBarCount {
+            button.title = " \(count)"
+            button.imagePosition = .imageLeading
+            button.toolTip = "KillX — \(count) listeners"
+        } else {
+            button.title = ""
+            button.imagePosition = .imageOnly
+            button.toolTip = "KillX"
+        }
+    }
+
     private var cachedMenuBarIcon: NSImage?
 
     private func makeMenuBarIcon() -> NSImage {
@@ -249,10 +262,16 @@ final class StatusItemController: NSObject {
     private func startLiveMonitoring() {
         liveMonitoringTask?.cancel()
         liveMonitoringTask = Task { @MainActor [weak self] in
+            var tick = 0
             while let self = self, self.isShown {
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
                 guard !Task.isCancelled, self.isShown else { break }
-                await AppListViewModel.shared.updateLiveStats()
+                tick += 1
+                if tick % 5 == 0 {
+                    await AppListViewModel.shared.refresh()
+                } else {
+                    await AppListViewModel.shared.updateLiveStats()
+                }
                 self.updatePopoverSize()
             }
         }

@@ -45,6 +45,13 @@ struct PortRowView: View {
                 .layoutPriority(1)
 
             HStack(spacing: 4) {
+                if ConfigStore.shared.config.favoritePorts.contains(port.port) {
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 8))
+                        .foregroundStyle(Color.yellow)
+                        .help("Favorite port")
+                }
+
                 Text(port.displayAppName)
                     .font(.system(size: 12.5, weight: .regular))
                     .foregroundStyle(Color.primary)
@@ -63,6 +70,15 @@ struct PortRowView: View {
                         .help(docker.name)
                         .layoutPriority(1)
                 }
+
+                Text(port.exposure.label)
+                    .font(.system(size: 8, weight: .bold))
+                    .padding(.horizontal, 3)
+                    .padding(.vertical, 1)
+                    .background(exposureColor.opacity(0.16))
+                    .foregroundStyle(exposureColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 3))
+                    .help("Bound to \(port.bindAddress)")
             }
             .layoutPriority(0)
 
@@ -108,7 +124,7 @@ struct PortRowView: View {
             }
             .buttonStyle(.plain)
             .disabled(isPending || port.isSystemProtected)
-            .help(port.isSystemProtected ? "System protected port" : (isPending ? "Operation in progress" : (isForced ? "Force kill :\(port.port) (SIGKILL)" : "Kill :\(port.port) (SIGTERM)")))
+            .help(port.isSystemProtected ? "System protected port" : (isPending ? (vm.terminationStages[port.id] ?? "Operation in progress") : (isForced ? "Force kill :\(port.port) (SIGKILL)" : "Kill :\(port.port) (SIGTERM)")))
             .accessibilityLabel(port.isSystemProtected ? "System protected port" : "Kill :\(port.port)")
             .onHover { h in state.isQuitHovered = h }
             .layoutPriority(2)
@@ -139,6 +155,14 @@ struct PortRowView: View {
             if port.memoryBytes > 0 { return port.memoryFormatted }
             if port.cpuUsage > 0 { return port.cpuFormatted }
             return ""
+        }
+    }
+
+    private var exposureColor: Color {
+        switch port.exposure {
+        case .local: return .secondary
+        case .network: return .orange
+        case .allInterfaces: return .red
         }
     }
 
@@ -214,6 +238,16 @@ struct PortRowView: View {
             menu.addItem(.separator())
 
             menu.addItem(MenuHelper.makeItem(
+                title: "Interrupt Port :\(portStr) (SIGINT)",
+                keyEquivalent: "i",
+                keyEquivalentModifierMask: [.command, .shift],
+                systemSymbolName: "pause.circle",
+                action: {
+                    vm.confirmAndInterruptPort(port)
+                }
+            ))
+
+            menu.addItem(MenuHelper.makeItem(
                 title: killTitle,
                 keyEquivalent: "k",
                 keyEquivalentModifierMask: killMask,
@@ -226,6 +260,18 @@ struct PortRowView: View {
         }
 
         menu.addItem(.separator())
+
+        menu.addItem(MenuHelper.makeItem(
+            title: ConfigStore.shared.config.favoritePorts.contains(port.port) ? "Remove Port from Favorites" : "Add Port to Favorites",
+            systemSymbolName: ConfigStore.shared.config.favoritePorts.contains(port.port) ? "star.slash" : "star",
+            action: { vm.toggleFavorite(port.port) }
+        ))
+
+        menu.addItem(MenuHelper.makeItem(
+            title: ConfigStore.shared.config.watchedPorts.contains(port.port) ? "Stop Watching Port" : "Watch Port Changes",
+            systemSymbolName: ConfigStore.shared.config.watchedPorts.contains(port.port) ? "bell.slash" : "bell",
+            action: { vm.toggleWatch(port.port) }
+        ))
 
         menu.addItem(MenuHelper.makeItem(
             title: "Add Port :\(portStr) to Exclude List",
@@ -254,6 +300,33 @@ struct PortRowView: View {
                 NSPasteboard.general.setString(String(port.pid), forType: .string)
             }
         ))
+
+        if !port.command.isEmpty {
+            menu.addItem(MenuHelper.makeItem(
+                title: "Copy Restart Command",
+                systemSymbolName: "terminal",
+                action: {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(port.command, forType: .string)
+                }
+            ))
+        }
+
+        if let cwd = port.cwd, FileManager.default.fileExists(atPath: cwd) {
+            menu.addItem(MenuHelper.makeItem(
+                title: "Open Terminal Here",
+                systemSymbolName: "apple.terminal",
+                action: {
+                    let terminal = URL(fileURLWithPath: "/System/Applications/Utilities/Terminal.app")
+                    let configuration = NSWorkspace.OpenConfiguration()
+                    NSWorkspace.shared.open(
+                        [URL(fileURLWithPath: cwd)],
+                        withApplicationAt: terminal,
+                        configuration: configuration
+                    ) { _, _ in }
+                }
+            ))
+        }
 
         if port.port > 0 && port.port < 65536 {
             menu.addItem(MenuHelper.makeItem(

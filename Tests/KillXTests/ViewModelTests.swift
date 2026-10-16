@@ -2,10 +2,40 @@ import Testing
 import Foundation
 @testable import KillX
 
+private final class SequencedPortService: PortServicing, @unchecked Sendable {
+    private let lock = NSLock()
+    private var calls = 0
+
+    func fetchListeningPorts() async -> [PortInfo] {
+        let call: Int = lock.withLock {
+            calls += 1
+            return calls
+        }
+        try? await Task.sleep(nanoseconds: call == 1 ? 50_000_000 : 5_000_000)
+        return [PortInfo(port: call == 1 ? 3000 : 8080, pid: pid_t(100 + call), processName: "node")]
+    }
+
+    func refreshStats(for ports: [PortInfo]) async -> [PortInfo] { ports }
+    func killPort(_ port: PortInfo, mode: TerminationMode, progress: @escaping @Sendable (String) -> Void) async -> Bool {
+        progress("done")
+        return true
+    }
+    func killMultiplePorts(_ ports: [PortInfo], force: Bool) async -> Int { ports.count }
+    func traceProcessTree(pid: pid_t) async -> [ProcessTreeNodeInfo] { [] }
+}
+
 @Suite("AppListViewModel State & Selection Tests", .serialized)
 @MainActor
 struct AppListViewModelTests {
-    let vm = AppListViewModel.shared
+    let configStore: ConfigStore
+    let vm: AppListViewModel
+
+    init() {
+        let defaults = UserDefaults(suiteName: "KillXTests.viewmodel.\(UUID())")!
+        let store = ConfigStore(userDefaults: defaults, enableAppSideEffects: false)
+        configStore = store
+        vm = AppListViewModel(portService: StubPortService(), configStore: store)
+    }
 
     let port1 = PortInfo(port: 3000, pid: 101, processName: "node", command: "next dev", isDevServer: true)
     let port2 = PortInfo(port: 5432, pid: 102, processName: "postgres", command: "postgres -D /data", isDevServer: false)
@@ -88,19 +118,19 @@ struct AppListViewModelTests {
         vm.ports = [port1, port2]
         vm.searchQuery = ""
         vm.selectedPorts = [port1.id, port2.id]
-        ConfigStore.shared.config.excludePorts = [port2.port]
+        configStore.config.excludePorts = [port2.port]
 
         #expect(vm.selectedVisibleCount == 1)
         #expect(vm.filteredPorts.map(\.id) == [port1.id])
 
-        ConfigStore.shared.config.excludePorts = []
+        configStore.config.excludePorts = []
     }
 
     @Test("Force kill all confirmation excludes excluded ports")
     func testForceKillAllRespectsExclusions() {
         vm.ports = [port1, port2]
-        ConfigStore.shared.config.excludePorts = [port2.port]
-        ConfigStore.shared.config.confirmKill = true
+        configStore.config.excludePorts = [port2.port]
+        configStore.config.confirmKill = true
         vm.pendingKillConfirmation = nil
 
         vm.confirmAndForceKillAll()
@@ -110,7 +140,7 @@ struct AppListViewModelTests {
         #expect(vm.pendingKillConfirmation?.message.contains(":5432") == false)
 
         vm.pendingKillConfirmation = nil
-        ConfigStore.shared.config.excludePorts = []
+        configStore.config.excludePorts = []
     }
 
     @Test("toggleSelectAll toggles between all and none")
@@ -128,7 +158,7 @@ struct AppListViewModelTests {
 
     @Test("confirmAndKillPort shows confirmation prompt when confirmKill is enabled")
     func testConfirmAndKillPortConfirmation() {
-        ConfigStore.shared.config.confirmKill = true
+        configStore.config.confirmKill = true
         vm.pendingKillConfirmation = nil
 
         vm.confirmAndKillPort(port1, force: false)
@@ -142,7 +172,7 @@ struct AppListViewModelTests {
 
     @Test("confirmAndKillPort force mode sets isForced and title")
     func testConfirmAndKillPortForceMode() {
-        ConfigStore.shared.config.confirmKill = true
+        configStore.config.confirmKill = true
         vm.pendingKillConfirmation = nil
 
         vm.confirmAndKillPort(port1, force: true)
@@ -156,7 +186,7 @@ struct AppListViewModelTests {
 
     @Test("confirmAndKillSelectedPorts shows confirmation with target summary")
     func testConfirmAndKillSelectedPortsConfirmation() {
-        ConfigStore.shared.config.confirmKill = true
+        configStore.config.confirmKill = true
         vm.ports = [port1, port2]
         vm.selectedPorts = [port1.id, port2.id]
         vm.pendingKillConfirmation = nil
@@ -171,12 +201,26 @@ struct AppListViewModelTests {
 
     @Test("confirmAndKillPort skips prompt when confirmKill is disabled")
     func testConfirmAndKillPortDisabled() {
-        ConfigStore.shared.config.confirmKill = false
+        configStore.config.confirmKill = false
         vm.pendingKillConfirmation = nil
 
         vm.confirmAndKillPort(port1, force: false)
 
         #expect(vm.pendingKillConfirmation == nil)
-        ConfigStore.shared.config.confirmKill = true
+        configStore.config.confirmKill = true
+    }
+
+    @Test("Overlapping refresh keeps newest result and clears loading")
+    func testOverlappingRefresh() async {
+        let defaults = UserDefaults(suiteName: "KillXTests.refresh.\(UUID())")!
+        let store = ConfigStore(userDefaults: defaults, enableAppSideEffects: false)
+        let model = AppListViewModel(portService: SequencedPortService(), configStore: store)
+        let first = Task { await model.refresh() }
+        try? await Task.sleep(nanoseconds: 1_000_000)
+        let second = Task { await model.refresh() }
+        await first.value
+        await second.value
+        #expect(model.ports.map(\.port) == [8080])
+        #expect(!model.isLoading)
     }
 }
