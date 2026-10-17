@@ -92,7 +92,10 @@ final class UpdateDownloadService: NSObject, ObservableObject {
 
         let configuration = URLSessionConfiguration.default
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        session = URLSession(configuration: configuration, delegate: self, delegateQueue: OperationQueue.main)
+        let queue = OperationQueue()
+        queue.maxConcurrentOperationCount = 1
+        queue.qualityOfService = .utility
+        session = URLSession(configuration: configuration, delegate: self, delegateQueue: queue)
 
         let task = session?.downloadTask(with: url)
         downloadTask = task
@@ -488,7 +491,9 @@ final class UpdateDownloadService: NSObject, ObservableObject {
 
         do {
             state = .extracting
-            let stagedURL = try await extractApp(from: persistentFile, originalFileName: fileName)
+            let stagedURL = try await Task.detached(priority: .utility) {
+                try await UpdateDownloadService.shared.extractApp(from: persistentFile, originalFileName: fileName)
+            }.value
             stagedDirURL = stagedURL.deletingLastPathComponent()
 
             guard isActive(session: completedSession, task: completedTask) else {

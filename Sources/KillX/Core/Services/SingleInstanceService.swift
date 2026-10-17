@@ -2,7 +2,7 @@ import AppKit
 import Foundation
 
 enum KillXIdentity {
-    static let supportedBundleIdentifiers: Set<String> = ["io.coreify.killx"]
+    static let supportedBundleIdentifiers: Set<String> = ["io.coreify.killx", "com.killx.app"]
 }
 
 @MainActor

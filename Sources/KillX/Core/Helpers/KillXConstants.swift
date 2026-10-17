@@ -1,7 +1,7 @@
 import Foundation
 
 enum KillXConstants {
-    static let primaryBundleId = "com.killx.app"
+    static let primaryBundleId = "io.coreify.killx"
     static let appName = "KillX"
     static let author = "Toufiq Hasan Kiron"
     static let supportEmail = "hello@kiron.dev"
@@ -19,7 +19,7 @@ enum KillXConstants {
     }
 
     static var appVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.1"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.4"
     }
 
     static var buildNumber: String {

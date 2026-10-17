@@ -63,6 +63,7 @@ final class AppListViewModel: ObservableObject {
     private var hasLoadedOnce = false
     private var toastTask: Task<Void, Never>?
     private var fetchGeneration = 0
+    private var statsGeneration = 0
     private var activeRefreshes = 0
     private let portService: PortServicing
 
@@ -245,10 +246,10 @@ final class AppListViewModel: ObservableObject {
 
     func updateLiveStats() async {
         guard !isLoading else { return }
-        fetchGeneration += 1
-        let gen = fetchGeneration
+        statsGeneration += 1
+        let gen = statsGeneration
         let fetchedPorts = await portService.refreshStats(for: ports)
-        guard gen == fetchGeneration else { return }
+        guard gen == statsGeneration else { return }
         let sortedPorts = sort(ports: fetchedPorts)
         if sortedPorts != ports { ports = sortedPorts }
 
@@ -257,7 +258,6 @@ final class AppListViewModel: ObservableObject {
     }
 
     func resort() async {
-        fetchGeneration += 1
         ports = sort(ports: ports)
         selectedPorts = selectedPorts.intersection(Set(ports.map(\.id)))
     }

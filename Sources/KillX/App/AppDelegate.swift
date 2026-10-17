@@ -4,6 +4,7 @@ import SwiftUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItemController: StatusItemController?
+    private var distributedObservers: [NSObjectProtocol] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -36,20 +37,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 SettingsWindowController.shared.show(tab: tab)
             }
         }
-        DistributedNotificationCenter.default().addObserver(
+        distributedObservers.append(DistributedNotificationCenter.default().addObserver(
             forName: NSNotification.Name("io.coreify.killx.showSettings"),
             object: nil,
             queue: .main,
             using: handleShowSettings
-        )
-        DistributedNotificationCenter.default().addObserver(
+        ))
+        distributedObservers.append(DistributedNotificationCenter.default().addObserver(
             forName: NSNotification.Name("io.coreify.killx.showPreferences"),
             object: nil,
             queue: .main,
             using: handleShowSettings
-        )
+        ))
 
-        DistributedNotificationCenter.default().addObserver(
+        distributedObservers.append(DistributedNotificationCenter.default().addObserver(
             forName: NSNotification.Name("io.coreify.killx.showPopover"),
             object: nil,
             queue: .main
@@ -57,9 +58,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in
                 self?.statusItemController?.showPopover()
             }
-        }
+        })
 
-        DistributedNotificationCenter.default().addObserver(
+        distributedObservers.append(DistributedNotificationCenter.default().addObserver(
             forName: NSNotification.Name("io.coreify.killx.showHelp"),
             object: nil,
             queue: .main
@@ -67,10 +68,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Task { @MainActor in
                 HelpWindowController.shared.show()
             }
-        }
+        })
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        for token in distributedObservers {
+            DistributedNotificationCenter.default().removeObserver(token)
+        }
+        distributedObservers.removeAll()
         SingleInstanceService.shared.stopMonitoring()
         statusItemController = nil
     }

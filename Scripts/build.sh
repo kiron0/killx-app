@@ -24,6 +24,9 @@ if [ -f "$ROOT_DIR/.build/release/$APP_NAME" ]; then
     cp "$ROOT_DIR/.build/release/$APP_NAME" "$MACOS_DIR/$APP_NAME"
 elif [ -f "$ROOT_DIR/.build/arm64-apple-macosx/release/$APP_NAME" ]; then
     cp "$ROOT_DIR/.build/arm64-apple-macosx/release/$APP_NAME" "$MACOS_DIR/$APP_NAME"
+else
+    echo "binary not found in .build/release or .build/arm64-apple-macosx/release" >&2
+    exit 1
 fi
 chmod +x "$MACOS_DIR/$APP_NAME"
 

@@ -36,10 +36,18 @@ final class ListenerHistoryStore: ObservableObject {
         for port in previous where new[port.id] == nil { record(port: port, event: "closed", detail: port.command) }
     }
 
+    nonisolated private static let redactRegexes: [NSRegularExpression] = {
+        let patterns = [
+            #"(?i)(token|password|secret|api[_-]?key)=([^\s]+)"#,
+            #"(?i)(authorization:\s*bearer\s+)([^\s]+)"#
+        ]
+        return patterns.compactMap { try? NSRegularExpression(pattern: $0) }
+    }()
+
     func diagnostics(ports: [PortInfo], metrics: PortScanMetrics) -> String {
         var lines = [
             "KillX diagnostics",
-            "Generated: \(ISO8601DateFormatter().string(from: Date()))",
+            "Generated: \(Date().formatted(.iso8601))",
             "Ports: \(ports.count)",
             String(format: "Scan: %.3fs total, %.3fs discovery, %.3fs metadata", metrics.total, metrics.discovery, metrics.metadata)
         ]
@@ -52,12 +60,7 @@ final class ListenerHistoryStore: ObservableObject {
     }
 
     nonisolated static func redact(_ text: String) -> String {
-        let patterns = [
-            #"(?i)(token|password|secret|api[_-]?key)=([^\s]+)"#,
-            #"(?i)(authorization:\s*bearer\s+)([^\s]+)"#
-        ]
-        return patterns.reduce(text) { value, pattern in
-            guard let regex = try? NSRegularExpression(pattern: pattern) else { return value }
+        redactRegexes.reduce(text) { value, regex in
             let range = NSRange(value.startIndex..., in: value)
             return regex.stringByReplacingMatches(in: value, range: range, withTemplate: "$1=<redacted>")
         }

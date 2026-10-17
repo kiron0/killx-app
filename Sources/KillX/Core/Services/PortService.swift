@@ -298,7 +298,7 @@ public final class PortService {
         while Date() < deadline {
             guard let listenerPids = await listeningPids(port: port) else {
                 releasedSince = nil
-                try? await Task.sleep(nanoseconds: 200_000_000)
+                try? await Task.sleep(nanoseconds: 350_000_000)
                 continue
             }
 
@@ -317,7 +317,7 @@ public final class PortService {
                     retryCount += 1
                 }
             }
-            try? await Task.sleep(nanoseconds: 200_000_000)
+            try? await Task.sleep(nanoseconds: 350_000_000)
         }
         guard let releasedSince else { return false }
         return Date().timeIntervalSince(releasedSince) >= 0.75
@@ -337,7 +337,7 @@ public final class PortService {
                 proc.arguments = ["-nP", "-iTCP:\(port)", "-sTCP:LISTEN", "-t"]
                 let pipe = Pipe()
                 proc.standardOutput = pipe
-                proc.standardError = Pipe()
+                proc.standardError = FileHandle.nullDevice
 
                 do {
                     try proc.run()
@@ -737,7 +737,7 @@ public final class PortService {
                 proc.arguments = arguments
                 let pipe = Pipe()
                 proc.standardOutput = pipe
-                proc.standardError = Pipe()
+                proc.standardError = FileHandle.nullDevice
 
                 do {
                     try proc.run()
@@ -753,6 +753,17 @@ public final class PortService {
 
     private func fetchCwds(for pids: [pid_t]) async -> [pid_t: String] {
         guard !pids.isEmpty else { return [:] }
+        // chunk lsof -p args → avoid ARG_MAX + long single fork
+        let chunks = stride(from: 0, to: pids.count, by: 32).map { Array(pids[$0..<min($0 + 32, pids.count)]) }
+        var merged: [pid_t: String] = [:]
+        for chunk in chunks {
+            let part = await fetchCwdsChunk(pids: chunk)
+            for (k, v) in part { merged[k] = v }
+        }
+        return merged
+    }
+
+    private func fetchCwdsChunk(pids: [pid_t]) async -> [pid_t: String] {
         return await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .utility).async {
                 let proc = Process()
@@ -761,7 +772,7 @@ public final class PortService {
                 proc.arguments = ["-a", "-p", pidArgs, "-d", "cwd", "-Fn"]
                 let pipe = Pipe()
                 proc.standardOutput = pipe
-                proc.standardError = Pipe()
+                proc.standardError = FileHandle.nullDevice
 
                 var map: [pid_t: String] = [:]
                 do {
@@ -770,7 +781,7 @@ public final class PortService {
                     proc.waitUntilExit()
                     if let text = String(data: data, encoding: .utf8) {
                         var currentPid: pid_t = 0
-                        for line in text.components(separatedBy: "\n") {
+                        for line in text.split(separator: "\n") {
                             if line.hasPrefix("p"), let p = pid_t(line.dropFirst()) {
                                 currentPid = p
                             } else if line.hasPrefix("n"), currentPid > 0 {
@@ -805,7 +816,7 @@ public final class PortService {
                 proc.arguments = ["-axo", "pid=,ppid=,user=,pcpu=,args="]
                 let pipe = Pipe()
                 proc.standardOutput = pipe
-                proc.standardError = Pipe()
+                proc.standardError = FileHandle.nullDevice
 
                 var map: [pid_t: RawProcessItem] = [:]
                 do {
@@ -813,11 +824,9 @@ public final class PortService {
                     let data = pipe.fileHandleForReading.readDataToEndOfFile()
                     proc.waitUntilExit()
                     if let text = String(data: data, encoding: .utf8) {
-                        let lines = text.components(separatedBy: "\n")
-                        for line in lines {
-                            let trimmed = line.trimmingCharacters(in: .whitespaces)
-                            guard !trimmed.isEmpty else { continue }
-                            let parts = trimmed.split(separator: " ", maxSplits: 4, omittingEmptySubsequences: true)
+                        for line in text.split(separator: "\n") {
+                            guard !line.isEmpty else { continue }
+                            let parts = line.split(separator: " ", maxSplits: 4, omittingEmptySubsequences: true)
                             if parts.count >= 5,
                                let pid = pid_t(parts[0]),
                                let ppid = pid_t(parts[1]) {

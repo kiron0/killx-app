@@ -40,7 +40,7 @@ final class UpdateChecker: ObservableObject {
     @Published var checkState: UpdateCheckState = .idle
 
     var currentVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.1"
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? KillXConstants.appVersion
     }
 
     func resetState() {

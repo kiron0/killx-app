@@ -75,8 +75,8 @@ public final class DockerService {
         }
 
         var list: [DockerInfo] = []
-        let lines = output.components(separatedBy: "\n")
-        for line in lines {
+        for line in output.split(separator: "\n") {
+            guard !line.isEmpty else { continue }
             let trimmed = line.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty, let data = trimmed.data(using: .utf8) else { continue }
             if let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -128,8 +128,7 @@ public final class DockerService {
     func extractPorts(from portsStr: String) -> [Int] {
         guard !portsStr.isEmpty else { return [] }
         var result: [Int] = []
-        let mappings = portsStr.components(separatedBy: ",")
-        for mapping in mappings {
+        for mapping in portsStr.split(separator: ",") {
             let trimmed = mapping.trimmingCharacters(in: .whitespaces)
             guard let arrowRange = trimmed.range(of: "->") else { continue }
             let hostPart = String(trimmed[..<arrowRange.lowerBound])
@@ -164,7 +163,7 @@ public final class DockerService {
 
                 let pipe = Pipe()
                 process.standardOutput = pipe
-                process.standardError = Pipe()
+                process.standardError = FileHandle.nullDevice
 
                 do {
                     try process.run()

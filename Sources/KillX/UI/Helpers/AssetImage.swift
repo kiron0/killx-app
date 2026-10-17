@@ -2,17 +2,27 @@ import SwiftUI
 import AppKit
 
 enum AssetImages {
+    private static let cache = NSCache<NSString, NSImage>()
+
     static func load(_ name: String) -> NSImage? {
+        if let cached = cache.object(forKey: name as NSString) {
+            return cached
+        }
+        var result: NSImage?
         if let url = Bundle.main.url(forResource: name, withExtension: "png"),
            let img = NSImage(contentsOf: url) {
-            return img
+            result = img
+        } else {
+            let localPath = "Support/Icons/\(name).png"
+            if FileManager.default.fileExists(atPath: localPath),
+               let img = NSImage(contentsOfFile: localPath) {
+                result = img
+            }
         }
-        let localPath = "Support/Icons/\(name).png"
-        if FileManager.default.fileExists(atPath: localPath),
-           let img = NSImage(contentsOfFile: localPath) {
-            return img
+        if let result {
+            cache.setObject(result, forKey: name as NSString)
         }
-        return nil
+        return result
     }
 
     static var appIcon: NSImage? {

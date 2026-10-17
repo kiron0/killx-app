@@ -189,7 +189,7 @@ final class StatusItemController: NSObject {
 
         frame.origin = NSPoint(x: originX, y: originY)
         frame = frame.integral
-        if AppListViewModel.shared.arrowX != arrowX {
+        if abs(AppListViewModel.shared.arrowX - arrowX) >= 0.5 {
             AppListViewModel.shared.arrowX = arrowX
         }
         guard frame != win.frame else { return }
